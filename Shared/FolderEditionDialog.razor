@@ -1,0 +1,19 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="@FolderName" Label="Folder Name" ReadOnly="false"/>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Submit">@ButtonText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string FolderName { get; set; } = string.Empty;
+    [Parameter] public string ButtonText { get; set; }
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(this.FolderName));
+    void Cancel() => MudDialog.Cancel();
+}

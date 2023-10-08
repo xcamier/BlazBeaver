@@ -1,0 +1,33 @@
+﻿@inherits LayoutComponentBase
+
+@using BlazBeaver.Helpers
+
+<MudThemeProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+
+<PageTitle>BlazBeaver</PageTitle>
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@BlazBeaver.Helpers.AppIcons.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h5" Class="ml-3">BlazBeaver</MudText>
+        <MudSpacer />
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <NavMenu />
+    </MudDrawer>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+
+@code {
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

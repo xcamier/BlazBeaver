@@ -1,0 +1,488 @@
+@page "/rootrequirements"
+
+@using Data;
+@using System.ComponentModel.DataAnnotations;
+@using BlazBeaver.Interfaces;
+
+@inject IRequirementsRepository RR;
+@inject IDialogService DialogService;
+
+<PageTitle>Requirements</PageTitle>
+
+<h1>Requirements</h1>
+
+<EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+    <MudGrid>
+        @if (@loadingError)
+        {
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled">Meltdown is imminent</MudAlert>
+            </MudItem>
+        }
+        <MudItem xs="4">
+            <MudPaper>
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnAddRequirementAsync">Add Requirement</MudButton>
+                        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnAddFolderAsync">Add Folder</MudButton>
+                        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnRenameFolderAsync">Rename Folder</MudButton>
+                        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Error" OnClick="OnDeleteAsync">Delete</MudButton>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTreeView Items="@TreeItems" T="TreeItemData" Dense="true" Hover="true" ExpandOnDoubleClick="true" SelectedValueChanged="OnSelected2Async">
+                            <ItemTemplate Context="treeContext">
+                                <MudTreeViewItem @bind-Expanded="@treeContext.IsExpanded" Items="@treeContext.TreeItems" Value="@treeContext"
+                                    Icon="@treeContext.Icon" Text="@treeContext.DisplayText"/>
+                            </ItemTemplate>
+                        </MudTreeView>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="8">
+            <MudCard>
+                @if (@loadingError)
+                {
+                    <MudCardHeader>
+                        <MudText>Error when loading the req</MudText>
+                    </MudCardHeader>
+                }
+
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField Label="Title" Required="true" RequiredError="Requirement title is required!" 
+                                            @bind-Value="model.Title" For="@(() => model.Title)"/>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudCheckBox @bind-value="model.IsSafety" For="@(() => model.IsSafety)">Safety Risk</MudCheckBox>
+                        </MudItem>
+                        <MudItem xs="8">
+                            <MudSelect Placeholder="Select culture" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
+                                <MudSelectItem Value="@("Functional")" />
+                                <MudSelectItem Value="@("Technical")" />
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText>Requirement Description</MudText>
+                            <MarkdownEditor @bind-Value="@model.Description"
+                                            @ref="mdDescription" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText>Requirement Changelog</MudText>
+                            <MarkdownEditor @bind-Value="@model.Changelog"
+                                            @ref="mdChangelog" />
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton  MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Save</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+        
+    </MudGrid>
+</EditForm>
+
+
+@code {
+    MarkdownEditor mdDescription;
+    MarkdownEditor mdChangelog;
+
+    private HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
+    private TreeItemData _selectedItem; 
+
+    bool success;
+    string[] errors = { };
+   // MudTextField<string> pwField1;
+    //MudForm form;
+
+    //bool displayEditor = false;
+    bool loadingError = false;
+
+    RequirementEditionForm model = new RequirementEditionForm();
+    Requirement selectedRequirement;
+
+    string selectedItem;
+
+    //string markdownValue = "#Markdown Editor\nThis is a test";
+    //string markdownHtmlDescr;
+    //string markdownHtmlChlog;
+
+
+    public class RequirementEditionForm
+    {
+        [Required]
+        public string Title { get; set; }
+
+        public bool IsSafety { get; set; }
+        public string TypeOfRequirement { get; set; }
+
+        [Required]
+        public string Description { get; set; }
+
+        [Required]
+        public string Changelog { get; set; }
+    }
+
+    public class TreeItemData
+    {
+        public string Guid { get; set; }
+        public string Url { get; set; }
+        public string DisplayText { get; set; }
+        public bool IsFolder { get; set; }
+        public string Icon { get; set; }
+        public bool IsExpanded { get; set; }
+
+        public bool HasChild => TreeItems != null && TreeItems.Count > 0;
+
+        public HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
+    }
+
+
+    protected override void OnInitialized()
+    {
+        IEnumerable<Folder> allReqs =  RR.GetAllRequirements();
+        
+        var rootItem = allReqs.FirstOrDefault();
+
+        if (rootItem != null)
+        {
+            TreeItemData dt = CreateTreeItemData(rootItem.Guid, rootItem.Url, rootItem.FolderName, true);
+            TreeItems.Add(dt);
+            Map(rootItem, dt);
+        }
+    }
+
+    private async Task OnSelected2Async(TreeItemData selectedValue)
+    {
+        _selectedItem = selectedValue;
+    }
+
+    private void Map(Folder sourceFolder, TreeItemData tid)
+    {
+
+        foreach (Requirement req in sourceFolder.FolderItems)
+        {
+            TreeItemData dt = CreateTreeItemData(req.Guid, req.Url, string.Concat(req.Id, " ", req.Title), false);
+            tid.TreeItems.Add(dt);
+        }
+
+        HashSet<TreeItemData> subFolders = new HashSet<TreeItemData>();
+        foreach (Folder folder in sourceFolder.SubFolders)
+        {
+            TreeItemData dt = CreateTreeItemData(folder.Guid, folder.Url, folder.FolderName, true);
+            tid.TreeItems.Add(dt);
+            Map(folder, dt);
+        }
+    }
+
+    private TreeItemData CreateTreeItemData(string guid, string url, string displayText, bool isFolder)
+    {
+        TreeItemData dt = new TreeItemData()
+        {
+            Guid = guid,
+            Url = url,
+            DisplayText = displayText,
+            Icon = isFolder ? Helpers.AppIcons.SimpleFolder : string.Empty,
+            IsExpanded = false,
+            IsFolder = isFolder
+        };
+
+        return dt;
+    }
+
+   private async Task OnAddRequirementAsync()
+    {
+        await FlushValues();
+        model.Title = string.Concat(Helpers.ReqAndProcProperties.ReqPrefix, "#");
+        selectedRequirement = new Requirement()
+        {
+            Title = model.Title
+        };
+    }
+
+    private async Task OnAddFolderAsync()
+    {
+        if (_selectedItem != null)
+        {
+            DialogResult result = await DisplayCreateFolderDialogAsync();
+
+            if (!result.Canceled)
+            {
+                string proposedFolderName = result.Data as string ?? string.Empty;
+
+                if (_selectedItem.IsFolder)
+                {
+                    string newFolderUrl = RR.CreateFolder(proposedFolderName, _selectedItem.Url);
+
+                    if (!string.IsNullOrEmpty(newFolderUrl))
+                    {
+                        AddToTree(newFolderUrl, proposedFolderName);
+                    }
+                }
+            }
+        }
+    }
+
+    private async Task OnRenameFolderAsync()
+    {
+        if (IsValidFolderSelection(_selectedItem)) 
+        {
+            DialogResult result = await DisplayRenamingDialogAsync();
+
+            if (!result.Canceled)
+            {
+                string proposedFolderName = result.Data as string ?? string.Empty;
+
+                string newFolderUrl = RR.RenameFolder(proposedFolderName, _selectedItem.Url);
+
+                if (!string.IsNullOrEmpty(newFolderUrl))
+                {
+                    RenameInTree(proposedFolderName, newFolderUrl);
+                }
+            }
+        }
+    }
+
+    private async Task OnDeleteAsync()
+    {
+        if (IsValidFolderSelection(_selectedItem)) 
+        {
+            DialogResult result = await DisplayDeletionDialogAsync();
+
+            if (!result.Canceled)
+            {
+                bool physicalDeletionOk = DeleteFromRepository();
+
+                if (physicalDeletionOk)
+                {
+                    DeleteFromTree();
+                }
+            }
+        }
+    }
+
+    private static bool IsValidFolderSelection(TreeItemData selectedItem)
+    {
+        return selectedItem != null && selectedItem.Url != Helpers.ReqAndProcProperties.RootFolderName;
+    }
+
+    private async Task OnSelectedAsync(string selectedValue)
+    {
+        selectedItem = selectedValue;
+        if (selectedValue is null || !selectedValue.StartsWith(Helpers.ReqAndProcProperties.ReqPrefix))
+        {
+           await FlushValues();
+           return;
+        }
+
+        //looks for the requirement and loads all the data
+        string[] reqIdAndTitle = selectedValue.Split(" ");
+        //selectedRequirement = RR.LoadRequirement(reqIdAndTitle[0]);
+
+        if (selectedRequirement is null)
+        {
+            loadingError = true;
+            //displayEditor = false;
+            await FlushValues();
+        }
+        else
+        {
+            loadingError = false;
+            //displayEditor = !string.IsNullOrEmpty(@SelectedReq) && @SelectedReq.StartsWith(Helpers.ReqAndProcProperties.ReqPrefix);
+
+            //assign the values to the fields
+            model.Title = $"{selectedRequirement.Id} {selectedRequirement.Title}".Trim();
+            model.Description = selectedRequirement.Description;
+            model.Changelog = selectedRequirement.Changelog;
+
+            await mdDescription.SetValueAsync(model.Description);
+            await mdChangelog.SetValueAsync(model.Changelog);
+        }
+    }
+
+    private async Task FlushValues()
+    {
+        model.Title = string.Empty;
+        model.Description = string.Empty;
+        model.Changelog = string.Empty;
+
+        await mdDescription.SetValueAsync(model.Description);
+        await mdChangelog.SetValueAsync(model.Changelog);
+    }
+
+    Task OnMarkdownDescrChanged(string value)
+    {
+        return Task.CompletedTask;
+    }
+
+    /*Task OnMarkdownDescrHTMLChanged(string value)
+    {
+        markdownHtmlDescr = value;
+        return Task.CompletedTask;
+    }*/
+
+    Task OnMarkdownChlogChanged(string value)
+    {
+        return Task.CompletedTask;
+    }
+
+    /*Task OnMarkdownChlogHTMLChanged(string value)
+    {
+        markdownHtmlChlog = value;
+        return Task.CompletedTask;
+    }*/
+
+    private void OnValidSubmit(EditContext context)
+    {
+        success = true;
+
+        RequirementEditionForm formContext = context.Model as RequirementEditionForm;
+
+        selectedRequirement.Id = Helpers.TitleAndIdTransformation.GetId(formContext.Title);
+        selectedRequirement.Title = Helpers.TitleAndIdTransformation.GetTitle(formContext.Title);
+        selectedRequirement.Description = formContext.Description;
+        selectedRequirement.Changelog = formContext.Changelog;
+
+
+        //WR.SaveRequirement(selectedRequirement);
+    }
+
+ 
+    private void AddToTree(string newFolderUrl, string proposedFolderName)
+    {
+        TreeItemData dt = CreateTreeItemData(string.Empty, newFolderUrl, proposedFolderName, true);
+
+        TreeItemData folderObj = FindFolderFromUrl(_selectedItem.Url, TreeItems.ElementAt(0));
+
+        if (folderObj == null)
+        {
+            //At root level
+            folderObj = TreeItems.FirstOrDefault();
+        }
+        folderObj.TreeItems.Add(dt);
+        folderObj.IsExpanded = true;
+    }
+
+    private void RenameInTree(string newFolderName, string newFolderUrl)
+    {
+        TreeItemData folderObj = FindFolderFromUrl(_selectedItem.Url, TreeItems.ElementAt(0));
+        if (folderObj != null)
+        {
+            folderObj.Url = newFolderUrl;
+            folderObj.DisplayText = newFolderName;
+        }
+    }
+
+    private async Task<DialogResult> DisplayCreateFolderDialogAsync()
+    {
+        var parameters = new DialogParameters<FolderEditionDialog>();
+        parameters.Add(x => x.FolderName, string.Empty);
+        parameters.Add(x => x.ButtonText, "Create");
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<FolderEditionDialog>("Folder creation", parameters, options);
+        
+        return await dialog.Result;      
+    }
+
+    private async Task<DialogResult> DisplayRenamingDialogAsync()
+    {
+        var parameters = new DialogParameters<FolderEditionDialog>();
+        parameters.Add(x => x.FolderName, string.Empty);
+        parameters.Add(x => x.ButtonText, "Rename");
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<FolderEditionDialog>("Folder renaming", parameters, options);
+        
+        return await dialog.Result; 
+    }
+
+    private async Task<DialogResult> DisplayDeletionDialogAsync()
+    {
+        string elementType = _selectedItem.IsFolder ? "folder" : "requirement";
+
+        var parameters = new DialogParameters<GenericConfirmationDialog>();
+        parameters.Add(x => x.ContentText, $"Do you really want to delete this {elementType}? It cannot be undone.");
+        parameters.Add(x => x.ButtonText, "Delete");
+        parameters.Add(x => x.Color, Color.Error);
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<GenericConfirmationDialog>("Delete", parameters, options);
+        
+        return await dialog.Result;
+    }
+
+    private bool DeleteFromRepository()
+    {
+        if (_selectedItem.IsFolder)
+        {
+            return RR.DeleteFolder(_selectedItem.Url);
+        }
+        else
+        {
+            return RR.DeleteRequirement(_selectedItem.Url);
+        }
+    }
+
+    private void DeleteFromTree()
+    {
+        TreeItemData parent = FindParent(_selectedItem, TreeItems.ElementAt(0));    
+
+        if (parent != null)
+        {
+            parent.TreeItems.Remove(_selectedItem);
+            selectedItem = null;
+            StateHasChanged();
+        }        
+    }
+
+    private TreeItemData FindParent(TreeItemData element, TreeItemData startPoint)
+    {
+        bool found = startPoint.TreeItems.Any(e => e.Url == element.Url);
+        if (found)
+        {
+            return startPoint;
+        }
+        else
+        {
+            IEnumerable<TreeItemData> folders = startPoint.TreeItems.Where(sp => sp.IsFolder);
+            foreach (TreeItemData newSp in folders)
+            {
+                TreeItemData foundItem = FindParent(element, newSp);
+                if (foundItem != null)
+                {
+                    return foundItem;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private TreeItemData FindFolderFromUrl(string url, TreeItemData startPoint)
+    {
+        if (startPoint.Url == url)
+        {
+            return startPoint;
+        }
+        else
+        {
+            foreach (TreeItemData fd in startPoint.TreeItems)
+            {
+                TreeItemData foundFolder = FindFolderFromUrl(url, fd);
+                if (foundFolder != null)
+                {
+                    return foundFolder;
+                }
+            }
+        }
+
+        return null;
+    }
+}
