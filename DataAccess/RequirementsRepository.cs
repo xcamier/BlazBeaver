@@ -1,14 +1,15 @@
 using BlazBeaver.Data;
+using BlazBeaver.Helpers;
 using BlazBeaver.Interfaces;
 
 namespace BlazBeaver.DataAccess;
 
 public class RequirementsRepository : IRequirementsRepository
 {
-    IEnumerable<Folder> _allRequirementsFolders;
+    private IEnumerable<Folder> _allRequirementsFolders;
 
-    IDataIO _dataIO;
-    DataSourceConverter<Requirement> _converter; 
+    private readonly IDataIO _dataIO;
+    private readonly DataSourceConverter<Requirement> _converter; 
 
     public RequirementsRepository(IDataIO dataIO, DataSourceConverter<Requirement> converter)
     {
@@ -16,7 +17,47 @@ public class RequirementsRepository : IRequirementsRepository
         _converter = converter;
     }
 
-    public bool AddRequirement(Requirement req)
+#region Requirements management
+    public IEnumerable<Folder> GetAllRequirements()
+    {
+        IEnumerable<string> rawRequirements = _dataIO.LoadAll(Helpers.FilesSettings.RequirementsFolderLocation, Helpers.FilesSettings.FileExtension);
+        IEnumerable<Folder> requirements = _converter.Convert(rawRequirements);
+        
+        _allRequirementsFolders = requirements;
+
+        return requirements;
+    }
+
+    public Requirement GetRequirement(string reqId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public string CreateRequirement(Requirement req, string folderUrl)
+    {
+        //Buids the url and adds it to the file
+        string reqFileName = string.Concat(Helpers.FileHelpers.CurrationOf(req.Id), FilesSettings.FileExtension);
+        string confirmedFolderUrl = folderUrl;
+        if (string.IsNullOrEmpty(folderUrl) || !Directory.Exists(folderUrl))
+        {
+            confirmedFolderUrl = Helpers.FilesSettings.RequirementsFolderLocation;
+        }
+        string requirementUrl = Path.Combine(confirmedFolderUrl, reqFileName);
+        req.Url = requirementUrl;
+
+        string requirementAsText = _converter.Convert(req);
+
+        bool requirementSaveSuccessfully = _dataIO.SaveItem(string.Empty, requirementUrl, requirementAsText);
+
+        if (!requirementSaveSuccessfully)
+        {
+            return string.Empty;
+        }
+
+        return requirementUrl;
+    }
+
+    public bool UpdateRequirement(Requirement req)
     {
         throw new NotImplementedException();
     }
@@ -48,6 +89,10 @@ public class RequirementsRepository : IRequirementsRepository
         return deletionSuccessful;
     }
 
+#endregion Requirements management
+
+#region  Folders management
+
     public bool DeleteFolder(string url)
     {
         bool deletionSuccessful = _dataIO.DeleteItem(url);
@@ -58,26 +103,6 @@ public class RequirementsRepository : IRequirementsRepository
         }
 
         return deletionSuccessful;
-    }
-
-    public IEnumerable<Folder> GetAllRequirements()
-    {
-        IEnumerable<string> rawRequirements = _dataIO.LoadAll(Helpers.FilesSettings.RequirementsFolderLocation, Helpers.FilesSettings.FileExtension);
-        IEnumerable<Folder> requirements = _converter.Convert(rawRequirements);
-        
-        _allRequirementsFolders = requirements;
-
-        return requirements;
-    }
-
-    public Requirement GetRequirement(string reqId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool UpdateRequirement(Requirement req)
-    {
-        throw new NotImplementedException();
     }
 
     public string CreateFolder(string newFolderName, string parentUrl)
@@ -193,4 +218,6 @@ public class RequirementsRepository : IRequirementsRepository
             GetAllRequirements();
         }
     }
+#endregion Folders management
+
 }

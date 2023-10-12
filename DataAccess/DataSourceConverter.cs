@@ -1,3 +1,4 @@
+using System.Text;
 using BlazBeaver.Data;
 using BlazBeaver.Interfaces;
 
@@ -5,6 +6,51 @@ namespace BlazBeaver.DataAccess;
 
 public class DataSourceConverter<T> where T: IReqProt, new()
 {
+
+# region Requirement convertion
+
+    public string Convert(Requirement req)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        IEnumerable<string> allPropertiesNames = GetPOCOProperties();
+
+        foreach (string propertyName in allPropertiesNames) 
+        {
+            //Creation of the section
+            string sectionName = Helpers.FilesSettings.SectionTpl.Replace("replace_me", propertyName);
+            sb.AppendLine(sectionName);
+            
+            //Creation of the content of the section
+            var propertyValue = req.GetType().GetProperty(propertyName).GetValue(req, null);
+            string propertyValueAsString = string.Empty;
+            string typeOfProperty = req.GetType().GetProperty(propertyName).PropertyType.Name;
+            if (typeOfProperty.Contains("List"))
+            {
+                List<string> propertyValueAsList = propertyValue as List<string>;
+                propertyValueAsString = string.Join(",", propertyValueAsList);
+            }
+            else
+            {
+                propertyValueAsString = $"{propertyValue}";  //implicit convertion to string  
+            }
+
+            sb.AppendLine(propertyValueAsString);
+            sb.AppendLine("");
+        }        
+        
+        return sb.ToString();
+    }
+
+    private IEnumerable<string> GetPOCOProperties()
+    {
+        return typeof(Requirement).GetProperties().Select(p => p.Name);
+    }
+
+#endregion Requirement convertion
+
+
+#region Folders convertion
     public IEnumerable<Folder> Convert(IEnumerable<string> folderContent)
     {
         List<Folder> folders = new List<Folder>();
@@ -13,7 +59,7 @@ public class DataSourceConverter<T> where T: IReqProt, new()
         foreach(string item in folderContent)
         {   
             string ext = Path.GetExtension(item);
-            if (ext.CompareTo(".md") == 0)
+            if (ext.CompareTo(Helpers.FilesSettings.FileExtension) == 0)
             {
                 //It's a req
                 T req = new T()
@@ -32,6 +78,7 @@ public class DataSourceConverter<T> where T: IReqProt, new()
 
         return folders;
     } 
+
 
     private Folder AddAsNewFolder(string guid, string url, List<Folder> folders)
     {
@@ -66,5 +113,7 @@ public class DataSourceConverter<T> where T: IReqProt, new()
             fd.SubFolders.Add(currentFolder);
         }
     }   
+#endregion Folders convertion
+
 }
 

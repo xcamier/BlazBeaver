@@ -6,7 +6,7 @@ namespace BlazBeaver.Interfaces
     {
         IEnumerable<Folder> GetAllRequirements();
         Requirement GetRequirement(string reqId);
-        bool AddRequirement(Requirement req);
+        string CreateRequirement(Requirement req, string folderUrl);
         bool UpdateRequirement(Requirement req);
         bool DeleteRequirement(string url);
         bool DeleteFolder(string url);

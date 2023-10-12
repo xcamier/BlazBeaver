@@ -17,24 +17,41 @@ public class DataIO : IDataIO
 
     public string LoadItem(string url)
     {
-        using (StreamReader sr = new StreamReader(url))
+        try
         {
-            return sr.ReadToEnd();
+            using (StreamReader sr = new StreamReader(url))
+            {
+                return sr.ReadToEnd();
+            }
         }
+        catch
+        {
+            return string.Empty;
+        }
+
     }  
 
-    public void SaveItem(string oldUrl, string newUrl, string updatedReq)
+    public bool SaveItem(string oldUrl, string newUrl, string updatedReq)
     {
-        using (FileStream fs = File.OpenWrite(newUrl))
+        try
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(updatedReq);
+            using (FileStream fs = File.OpenWrite(newUrl))
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(updatedReq);
 
-            fs.Write(bytes, 0, bytes.Length);
+                fs.Write(bytes, 0, bytes.Length);
+            }
+
+            if (!string.IsNullOrEmpty(oldUrl) && oldUrl != newUrl)
+            {
+                File.Delete(oldUrl);
+            }
+
+            return true;
         }
-
-        if (oldUrl != newUrl)
+        catch
         {
-            File.Delete(oldUrl);
+            return false;
         }
     }
 

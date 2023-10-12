@@ -6,6 +6,7 @@
 
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
+@inject IBasicsSettingsRepository BS;
 
 <PageTitle>Requirements</PageTitle>
 
@@ -59,10 +60,40 @@
                             <MudCheckBox @bind-value="model.IsSafety" For="@(() => model.IsSafety)">Safety Risk</MudCheckBox>
                         </MudItem>
                         <MudItem xs="8">
-                            <MudSelect Placeholder="Select culture" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
+                            <MudSelect Placeholder="Type of Requirement" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
                                 <MudSelectItem Value="@("Functional")" />
                                 <MudSelectItem Value="@("Technical")" />
                             </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12">
+                           <MudTextField Label="SRA Ids" Required="false"
+                                            @bind-Value="model.SRAIds" For="@(() => model.SRAIds)"/>
+                        </MudItem>
+                        <MudItem xs="6">
+                           <MudTextField Label="Created in version" Required="false"
+                                            @bind-Value="model.CreatedInVersion" For="@(() => model.CreatedInVersion)"/>
+                        </MudItem>
+                        <MudItem xs="6">
+                           <MudTextField Label="Deprecated in version" Required="false"
+                                            @bind-Value="model.DeprecatedInVersion" For="@(() => model.DeprecatedInVersion)"/>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudChipSet AllClosable="true" OnClose="UnselectComponent">
+                                @foreach (var value in selectedComponents)
+                                {
+                                    <MudChip Text="@value"></MudChip>
+                                }
+                            </MudChipSet>
+                            Components <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnSelectComponentsAsync"></MudIconButton>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudChipSet AllClosable="true" OnClose="UnselectSU">
+                                @foreach (var value in selectedSU)
+                                {
+                                    <MudChip Text="@value"></MudChip>
+                                }
+                            </MudChipSet>
+                            Software Units <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnSelectSUsAsync"></MudIconButton>
                         </MudItem>
                         <MudItem xs="12">
                             <MudText>Requirement Description</MudText>
@@ -73,6 +104,10 @@
                             <MudText>Requirement Changelog</MudText>
                             <MarkdownEditor @bind-Value="@model.Changelog"
                                             @ref="mdChangelog" />
+                        </MudItem>
+                        <MudItem xs="12">
+                           <MudTextField Label="Protocols Ids" Required="false"
+                                            @bind-Value="model.AssociatedProtocolsIds" For="@(() => model.AssociatedProtocolsIds)"/>
                         </MudItem>
                     </MudGrid>
                 </MudCardContent>
@@ -93,7 +128,7 @@
     private HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
     private TreeItemData _selectedItem; 
 
-    bool success;
+    //bool success;
     string[] errors = { };
    // MudTextField<string> pwField1;
     //MudForm form;
@@ -104,45 +139,21 @@
     RequirementEditionForm model = new RequirementEditionForm();
     Requirement selectedRequirement;
 
-    string selectedItem;
+    //string selectedItem;
 
     //string markdownValue = "#Markdown Editor\nThis is a test";
     //string markdownHtmlDescr;
     //string markdownHtmlChlog;
 
-
-    public class RequirementEditionForm
-    {
-        [Required]
-        public string Title { get; set; }
-
-        public bool IsSafety { get; set; }
-        public string TypeOfRequirement { get; set; }
-
-        [Required]
-        public string Description { get; set; }
-
-        [Required]
-        public string Changelog { get; set; }
-    }
-
-    public class TreeItemData
-    {
-        public string Guid { get; set; }
-        public string Url { get; set; }
-        public string DisplayText { get; set; }
-        public bool IsFolder { get; set; }
-        public string Icon { get; set; }
-        public bool IsExpanded { get; set; }
-
-        public bool HasChild => TreeItems != null && TreeItems.Count > 0;
-
-        public HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
-    }
+    List<string> selectedComponents = new List<string>();
+    List<string> selectedSU = new List<string>();
+ 
 
 
     protected override void OnInitialized()
     {
+        IEnumerable<string> allComponents = BS.GetAll(Helpers.FilesSettings.ComponentsSetting);
+        IEnumerable<string> allSoftwareUnits = BS.GetAll(Helpers.FilesSettings.SoftwareUnitsSetting);
         IEnumerable<Folder> allReqs =  RR.GetAllRequirements();
         
         var rootItem = allReqs.FirstOrDefault();
@@ -264,12 +275,40 @@
         }
     }
 
+    private async Task OnSelectComponentsAsync()
+    {
+        IEnumerable<string> allComponents = BS.GetAll(Helpers.FilesSettings.ComponentsSetting);
+        DialogResult result = await DisplayComponentsSelectorDialogAsync(allComponents);
+
+        if (!result.Canceled)
+        {
+            HashSet<string> results = result.Data as HashSet<string> ?? new HashSet<string>();
+            selectedComponents.AddRange(results.ToList());
+        }
+    }
+
+    private void UnselectComponent(MudChip chip) => selectedComponents.Remove(chip.Text);
+
+    private async Task OnSelectSUsAsync()
+    {
+            IEnumerable<string> allSU = BS.GetAll(Helpers.FilesSettings.SoftwareUnitsSetting);
+            DialogResult result = await DisplayComponentsSelectorDialogAsync(allSU);
+
+            if (!result.Canceled)
+            {
+                HashSet<string> results = result.Data as HashSet<string> ?? new HashSet<string>();
+                selectedSU.AddRange(results.ToList());
+            }
+    }
+
+    private  void UnselectSU(MudChip chip) => selectedSU.Remove(chip.Text);
+
     private static bool IsValidFolderSelection(TreeItemData selectedItem)
     {
         return selectedItem != null && selectedItem.Url != Helpers.ReqAndProcProperties.RootFolderName;
     }
 
-    private async Task OnSelectedAsync(string selectedValue)
+    /*private async Task OnSelectedAsync(string selectedValue)
     {
         selectedItem = selectedValue;
         if (selectedValue is null || !selectedValue.StartsWith(Helpers.ReqAndProcProperties.ReqPrefix))
@@ -301,7 +340,7 @@
             await mdDescription.SetValueAsync(model.Description);
             await mdChangelog.SetValueAsync(model.Changelog);
         }
-    }
+    }*/
 
     private async Task FlushValues()
     {
@@ -337,20 +376,40 @@
 
     private void OnValidSubmit(EditContext context)
     {
-        success = true;
+        //success = true;
 
         RequirementEditionForm formContext = context.Model as RequirementEditionForm;
 
+        if (selectedRequirement == null)
+        {
+            selectedRequirement = new Requirement();
+        }
+
         selectedRequirement.Id = Helpers.TitleAndIdTransformation.GetId(formContext.Title);
         selectedRequirement.Title = Helpers.TitleAndIdTransformation.GetTitle(formContext.Title);
+        selectedRequirement.Components = selectedComponents;
+        selectedRequirement.SoftwareUnits = selectedSU;
+        selectedRequirement.SRAIds = formContext.SRAIds;
+        selectedRequirement.CreatedInVersion = formContext.CreatedInVersion;
+        selectedRequirement.DeprecatedInVersion = formContext.DeprecatedInVersion;
+        selectedRequirement.IsSafety = formContext.IsSafety;
         selectedRequirement.Description = formContext.Description;
         selectedRequirement.Changelog = formContext.Changelog;
+        selectedRequirement.AssociatedProtocolsIds = formContext.AssociatedProtocolsIds;
 
+        string folderUrl = string.Empty;
+        if (_selectedItem != null && _selectedItem.IsFolder)
+        {
+            folderUrl = _selectedItem.Url;
+        }
+        else
+        {
+            folderUrl = Helpers.FilesSettings.RequirementsFolderLocation;
+        }
 
-        //WR.SaveRequirement(selectedRequirement);
+        RR.CreateRequirement(selectedRequirement, folderUrl);
     }
 
- 
     private void AddToTree(string newFolderUrl, string proposedFolderName)
     {
         TreeItemData dt = CreateTreeItemData(string.Empty, newFolderUrl, proposedFolderName, true);
@@ -418,6 +477,18 @@
         return await dialog.Result;
     }
 
+    private async Task<DialogResult> DisplayComponentsSelectorDialogAsync(IEnumerable<string> allItems)
+    {
+        var parameters = new DialogParameters<SettingsSelectorDialog>();
+        parameters.Add(x => x.AllItems, allItems.ToHashSet());
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.Large };
+
+        var dialog = await DialogService.ShowAsync<SettingsSelectorDialog>("Selection", parameters, options);
+        
+        return await dialog.Result;      
+    }
+
     private bool DeleteFromRepository()
     {
         if (_selectedItem.IsFolder)
@@ -437,7 +508,7 @@
         if (parent != null)
         {
             parent.TreeItems.Remove(_selectedItem);
-            selectedItem = null;
+            //selectedItem = null;
             StateHasChanged();
         }        
     }
