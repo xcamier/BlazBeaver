@@ -1,0 +1,83 @@
+﻿@using System.ComponentModel.DataAnnotations;
+@using BlazBeaver.Interfaces;
+
+@inject IBasicsSettingsRepository BS;
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                @string.Join(',', SelectedItems)
+                <MudTable @ref="_table" T="string" Dense="true"  Striped="true" Hover="true"
+                                        Items="@AllItems" MultiSelection="true" @bind-SelectedItems="tmpSelection"
+                                        Filter="new Func<string,bool>(FilterFunc)">
+                    <ToolBarContent>
+                        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>Label</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Label">@context</MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager PageSizeOptions="new int[]{ 10 }" />
+                    </PagerContent>
+                </MudTable>
+            </MudItem>
+            <MudItem xs="12">
+            <MudChipSet AllClosable="true" OnClose="UnselectItem">
+                @foreach (var value in SelectedItems)
+                {
+                    <MudChip Text="@value"></MudChip>
+                }
+            </MudChipSet>
+            Add selection to the basket <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnAddItems"></MudIconButton>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Submit">Select</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public HashSet<string> SelectedItems { get; set; } = new HashSet<string>();
+      
+    [Parameter] public HashSet<string> AllItems { get; set; } = new HashSet<string>();
+
+    private HashSet<string> tmpSelection = new HashSet<string>();
+
+    private MudTable<string> _table;
+
+    private int[] _pagerSizes = new int[] { 10 };
+    private string searchString = string.Empty;
+
+    private void OnAddItems()
+    {
+        foreach (string selItem in tmpSelection)
+        {
+            SelectedItems.Add(selItem);
+        }
+        tmpSelection.Clear();
+    }
+
+    private void UnselectItem(MudChip chip) => SelectedItems.Remove(chip.Text);
+    private void Submit() => MudDialog.Close(DialogResult.Ok(this.SelectedItems));
+    private void Cancel() => MudDialog.Cancel();
+
+    private bool FilterFunc(string item) => FilterFunc(item, searchString);
+
+    private bool FilterFunc(string item, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (item.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+}

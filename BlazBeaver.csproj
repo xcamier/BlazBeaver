@@ -9,6 +9,12 @@
   <ItemGroup>
     <PackageReference Include="MudBlazor" Version="6.10.0" />
     <PackageReference Include="PSC.Blazor.Components.MarkdownEditor" Version="2.0.13" />
+    <None Update="Resources\Components.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+      <None Update="Resources\SoftwareUnits.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

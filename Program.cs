@@ -19,7 +19,7 @@ builder.Services.AddMudServices();
 builder.Services.AddSingleton<IDataIO, DataIO>();
 builder.Services.AddSingleton<DataSourceConverter<Requirement>>();
 builder.Services.AddSingleton<IRequirementsRepository, RequirementsRepository>();
-
+builder.Services.AddSingleton<IBasicsSettingsRepository, BasicSettingsRepository>();
 
 var app = builder.Build();
 
