@@ -1,0 +1,295 @@
+﻿@using BlazBeaver.Data;
+@using BlazBeaver.Interfaces;
+
+@inject IRequirementsRepository RR;
+@inject IDialogService DialogService;
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnAddRequirementAsync">Add Requirement</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnAddFolderAsync">Add Folder</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnRenameFolderAsync">Rename Folder</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Error" OnClick="OnDeleteAsync">Delete</MudButton>
+    </MudItem>
+    <MudItem xs="12">
+        <MudTreeView Items="@TreeItems" T="TreeItemData" Dense="true" Hover="true" ExpandOnDoubleClick="true" SelectedValueChanged="OnSelectedValueAsync">
+            <ItemTemplate Context="treeContext">
+                <MudTreeViewItem @bind-Expanded="@treeContext.IsExpanded" Items="@treeContext.TreeItems" Value="@treeContext"
+                    Icon="@treeContext.Icon" Text="@treeContext.DisplayText"/>
+            </ItemTemplate>
+        </MudTreeView>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public EventCallback<TreeItemData> OnTreeItemSelected { get; set; }
+
+    private HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
+    private TreeItemData _selectedItem; 
+
+    protected override void OnInitialized()
+    {
+        IEnumerable<Folder> allReqs =  RR.GetAllRequirements();
+        
+        var rootItem = allReqs.FirstOrDefault();
+
+        if (rootItem != null)
+        {
+            TreeItemData dt = CreateTreeItemData(rootItem.Guid, rootItem.Url, rootItem.FolderName, true);
+            TreeItems.Add(dt);
+            Map(rootItem, dt);
+        }
+    }
+
+    private async Task OnSelectedValueAsync(TreeItemData selectedValue)
+    {
+        _selectedItem = selectedValue;
+
+        OnTreeItemSelected.InvokeAsync(selectedValue);
+    }
+
+   private async Task OnAddRequirementAsync()
+    {
+        /*await FlushValues();
+        model.Title = string.Concat(Helpers.ReqAndProcProperties.ReqPrefix, "#");
+        selectedRequirement = new Requirement()
+        {
+            Title = model.Title
+        };*/
+    }
+
+    private async Task OnAddFolderAsync()
+    {
+        if (_selectedItem != null)
+        {
+            DialogResult result = await DisplayCreateFolderDialogAsync();
+
+            if (!result.Canceled)
+            {
+                string proposedFolderName = result.Data as string ?? string.Empty;
+
+                if (_selectedItem.IsFolder)
+                {
+                    string newFolderUrl = RR.CreateFolder(proposedFolderName, _selectedItem.Url);
+
+                    if (!string.IsNullOrEmpty(newFolderUrl))
+                    {
+                        AddToTree(newFolderUrl, proposedFolderName);
+                    }
+                }
+            }
+        }
+    }
+
+    private async Task OnRenameFolderAsync()
+    {
+        if (IsValidFolderSelection(_selectedItem)) 
+        {
+            DialogResult result = await DisplayRenamingDialogAsync();
+
+            if (!result.Canceled)
+            {
+                string proposedFolderName = result.Data as string ?? string.Empty;
+
+                string newFolderUrl = RR.RenameFolder(proposedFolderName, _selectedItem.Url);
+
+                if (!string.IsNullOrEmpty(newFolderUrl))
+                {
+                    RenameInTree(proposedFolderName, newFolderUrl);
+                }
+            }
+        }
+    }
+
+    private async Task OnDeleteAsync()
+    {
+        if (IsValidFolderSelection(_selectedItem)) 
+        {
+            DialogResult result = await DisplayDeletionDialogAsync();
+
+            if (!result.Canceled)
+            {
+                bool physicalDeletionOk = DeleteFromRepository();
+
+                if (physicalDeletionOk)
+                {
+                    DeleteFromTree();
+                }
+            }
+        }
+    }
+
+    private void Map(Folder sourceFolder, TreeItemData tid)
+    {
+
+        foreach (Requirement req in sourceFolder.FolderItems)
+        {
+            TreeItemData dt = CreateTreeItemData(req.Guid, req.Url, string.Concat(req.Id, " ", req.Title), false);
+            tid.TreeItems.Add(dt);
+        }
+
+        HashSet<TreeItemData> subFolders = new HashSet<TreeItemData>();
+        foreach (Folder folder in sourceFolder.SubFolders)
+        {
+            TreeItemData dt = CreateTreeItemData(folder.Guid, folder.Url, folder.FolderName, true);
+            tid.TreeItems.Add(dt);
+            Map(folder, dt);
+        }
+    }
+
+    private TreeItemData CreateTreeItemData(string guid, string url, string displayText, bool isFolder)
+    {
+        TreeItemData dt = new TreeItemData()
+        {
+            Guid = guid,
+            Url = url,
+            DisplayText = displayText,
+            Icon = isFolder ? Helpers.AppIcons.SimpleFolder : string.Empty,
+            IsExpanded = false,
+            IsFolder = isFolder
+        };
+
+        return dt;
+    }
+
+   private async Task<DialogResult> DisplayCreateFolderDialogAsync()
+    {
+        var parameters = new DialogParameters<FolderEditionDialog>();
+        parameters.Add(x => x.FolderName, string.Empty);
+        parameters.Add(x => x.ButtonText, "Create");
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<FolderEditionDialog>("Folder creation", parameters, options);
+        
+        return await dialog.Result;      
+    }
+
+    private async Task<DialogResult> DisplayRenamingDialogAsync()
+    {
+        var parameters = new DialogParameters<FolderEditionDialog>();
+        parameters.Add(x => x.FolderName, string.Empty);
+        parameters.Add(x => x.ButtonText, "Rename");
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<FolderEditionDialog>("Folder renaming", parameters, options);
+        
+        return await dialog.Result; 
+    }
+
+    private async Task<DialogResult> DisplayDeletionDialogAsync()
+    {
+        string elementType = _selectedItem.IsFolder ? "folder" : "requirement";
+
+        var parameters = new DialogParameters<GenericConfirmationDialog>();
+        parameters.Add(x => x.ContentText, $"Do you really want to delete this {elementType}? It cannot be undone.");
+        parameters.Add(x => x.ButtonText, "Delete");
+        parameters.Add(x => x.Color, Color.Error);
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<GenericConfirmationDialog>("Delete", parameters, options);
+        
+        return await dialog.Result;
+    }
+
+  private void AddToTree(string newFolderUrl, string proposedFolderName)
+    {
+        TreeItemData dt = CreateTreeItemData(string.Empty, newFolderUrl, proposedFolderName, true);
+
+        TreeItemData folderObj = FindFolderFromUrl(_selectedItem.Url, TreeItems.ElementAt(0));
+
+        if (folderObj == null)
+        {
+            //At root level
+            folderObj = TreeItems.FirstOrDefault();
+        }
+        folderObj.TreeItems.Add(dt);
+        folderObj.IsExpanded = true;
+    }
+
+    private void RenameInTree(string newFolderName, string newFolderUrl)
+    {
+        TreeItemData folderObj = FindFolderFromUrl(_selectedItem.Url, TreeItems.ElementAt(0));
+        if (folderObj != null)
+        {
+            folderObj.Url = newFolderUrl;
+            folderObj.DisplayText = newFolderName;
+        }
+    }
+
+    private void DeleteFromTree()
+    {
+        TreeItemData parent = FindParent(_selectedItem, TreeItems.ElementAt(0));    
+
+        if (parent != null)
+        {
+            parent.TreeItems.Remove(_selectedItem);
+            //selectedItem = null;
+            StateHasChanged();
+        }        
+    }
+
+    private bool DeleteFromRepository()
+    {
+        if (_selectedItem.IsFolder)
+        {
+            return RR.DeleteFolder(_selectedItem.Url);
+        }
+        else
+        {
+            return RR.DeleteRequirement(_selectedItem.Url);
+        }
+    }
+
+    private TreeItemData FindFolderFromUrl(string url, TreeItemData startPoint)
+    {
+        if (startPoint.Url == url)
+        {
+            return startPoint;
+        }
+        else
+        {
+            foreach (TreeItemData fd in startPoint.TreeItems)
+            {
+                TreeItemData foundFolder = FindFolderFromUrl(url, fd);
+                if (foundFolder != null)
+                {
+                    return foundFolder;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private TreeItemData FindParent(TreeItemData element, TreeItemData startPoint)
+    {
+        bool found = startPoint.TreeItems.Any(e => e.Url == element.Url);
+        if (found)
+        {
+            return startPoint;
+        }
+        else
+        {
+            IEnumerable<TreeItemData> folders = startPoint.TreeItems.Where(sp => sp.IsFolder);
+            foreach (TreeItemData newSp in folders)
+            {
+                TreeItemData foundItem = FindParent(element, newSp);
+                if (foundItem != null)
+                {
+                    return foundItem;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsValidFolderSelection(TreeItemData selectedItem)
+    {
+        return selectedItem != null && selectedItem.Url != Helpers.ReqAndProcProperties.RootFolderName;
+    }
+}
