@@ -21,7 +21,7 @@ public class RequirementsRepository : IRequirementsRepository
     public IEnumerable<Folder> GetAllRequirements()
     {
         IEnumerable<string> rawRequirements = _dataIO.LoadAll(Helpers.FilesSettings.RequirementsFolderLocation, Helpers.FilesSettings.FileExtension);
-        IEnumerable<Folder> requirements = _converter.Convert(rawRequirements);
+        IEnumerable<Folder> requirements = _converter.Convert(rawRequirements, _dataIO);
         
         _allRequirementsFolders = requirements;
 

@@ -2,6 +2,11 @@ namespace BlazBeaver.Helpers;
 
 public class FileHelpers
 {
+    public static bool IsPathAFile(string url)
+    {
+        return File.Exists(url);
+    }
+
     //Removes special characters from the file name 
     public static string CurrationOf(string source)
     {

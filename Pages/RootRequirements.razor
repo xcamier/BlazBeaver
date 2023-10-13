@@ -152,8 +152,6 @@
 
     protected override void OnInitialized()
     {
-        IEnumerable<string> allComponents = BS.GetAll(Helpers.FilesSettings.ComponentsSetting);
-        IEnumerable<string> allSoftwareUnits = BS.GetAll(Helpers.FilesSettings.SoftwareUnitsSetting);
         IEnumerable<Folder> allReqs =  RR.GetAllRequirements();
         
         var rootItem = allReqs.FirstOrDefault();
@@ -385,6 +383,7 @@
             selectedRequirement = new Requirement();
         }
 
+        selectedRequirement.Guid = string.IsNullOrEmpty(formContext.Guid) ? Guid.NewGuid().ToString() : formContext.Guid; 
         selectedRequirement.Id = Helpers.TitleAndIdTransformation.GetId(formContext.Title);
         selectedRequirement.Title = Helpers.TitleAndIdTransformation.GetTitle(formContext.Title);
         selectedRequirement.Components = selectedComponents;

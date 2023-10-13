@@ -18,4 +18,8 @@ public static class ReqAndProcProperties
     public const string ProtPrefix = "R3GPROC";
     public const string ProtSeparator = "#";
     public const string RootFolderName = "root";
+    public static readonly IEnumerable<string> PropertiesToNotSerialize = new List<string>()
+    {
+        "Url"
+    };
 }

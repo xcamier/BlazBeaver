@@ -4,6 +4,8 @@ namespace BlazBeaver.Data;
 
     public class RequirementEditionForm
     {
+        public string Guid { get; set; } = string.Empty;
+
         [Required]
         public string Title { get; set; } = string.Empty;
 

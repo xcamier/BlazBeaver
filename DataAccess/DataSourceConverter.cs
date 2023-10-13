@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using BlazBeaver.Data;
 using BlazBeaver.Interfaces;
@@ -6,6 +7,65 @@ namespace BlazBeaver.DataAccess;
 
 public class DataSourceConverter<T> where T: IReqProt, new()
 {
+    public IEnumerable<Folder> Convert(IEnumerable<string> folderContent, IDataIO dataIO)
+    {
+        List<Folder> folders = new List<Folder>();
+
+        Folder currentFolder = AddAsNewFolder(string.Empty, Helpers.ReqAndProcProperties.RootFolderName, folders);
+        foreach(string itemUrl in folderContent)
+        {   
+            if (Helpers.FileHelpers.IsPathAFile(itemUrl))
+            {
+                string itemAsString = dataIO.LoadItem(itemUrl);
+                if (!string.IsNullOrEmpty(itemAsString))
+                {
+                    //It's a req 
+                    T newItem = new T()
+                    {
+                        Url = itemUrl
+                    };
+
+                    RequirementParser ps = new RequirementParser();
+                    bool parsingOk = ps.Parse(itemAsString);
+                    if (parsingOk)
+                    {
+                        Type type = typeof(T); 
+                        foreach (var p in ps.Properties)
+                        {
+                            PropertyInfo property = type.GetProperty(p.Key);
+
+                            if (property.PropertyType == typeof(string))
+                            {
+                                property.SetValue(newItem, p.Value, null);
+                            }
+                            else if (property.PropertyType == typeof(bool))
+                            {
+                                property.SetValue(newItem, System.Convert.ToBoolean(p.Value, null));
+                            }
+                            else if (property.PropertyType == typeof(List<string>))
+                            {
+                                string[] extractedValues = p.Value.Split(",");
+                                property.SetValue(newItem, extractedValues.ToList(), null);
+                            }
+                            else
+                            {
+                                Console.WriteLine("DataSourceConverter > Convert: property type not managed");
+                            }
+                        }
+                    }
+
+                    currentFolder.FolderItems.Add(newItem);    
+                }
+            }
+            else
+            {
+                //It's a folder
+                currentFolder = AddAsNewFolder(string.Empty, itemUrl, folders);
+            }
+        }
+
+        return folders;
+    } 
 
 # region Requirement convertion
 
@@ -15,7 +75,8 @@ public class DataSourceConverter<T> where T: IReqProt, new()
 
         IEnumerable<string> allPropertiesNames = GetPOCOProperties();
 
-        foreach (string propertyName in allPropertiesNames) 
+        foreach (string propertyName in allPropertiesNames.
+                                            Where(pn => !Helpers.ReqAndProcProperties.PropertiesToNotSerialize.Contains(pn))) 
         {
             //Creation of the section
             string sectionName = Helpers.FilesSettings.SectionTpl.Replace("replace_me", propertyName);
@@ -44,42 +105,13 @@ public class DataSourceConverter<T> where T: IReqProt, new()
 
     private IEnumerable<string> GetPOCOProperties()
     {
-        return typeof(Requirement).GetProperties().Select(p => p.Name);
+        return typeof(T).GetProperties().Select(p => p.Name);
     }
 
 #endregion Requirement convertion
 
 
-#region Folders convertion
-    public IEnumerable<Folder> Convert(IEnumerable<string> folderContent)
-    {
-        List<Folder> folders = new List<Folder>();
-
-        Folder currentFolder = AddAsNewFolder(string.Empty, Helpers.ReqAndProcProperties.RootFolderName, folders);
-        foreach(string item in folderContent)
-        {   
-            string ext = Path.GetExtension(item);
-            if (ext.CompareTo(Helpers.FilesSettings.FileExtension) == 0)
-            {
-                //It's a req
-                T req = new T()
-                {
-                    Url = item
-                };
-                
-                currentFolder.FolderItems.Add(req);    
-            }
-            else
-            {
-                //It's a folder
-                currentFolder = AddAsNewFolder(string.Empty, item, folders);
-            }
-        }
-
-        return folders;
-    } 
-
-
+#region Folders convertion    
     private Folder AddAsNewFolder(string guid, string url, List<Folder> folders)
     {
         Folder newFolder = new Folder()
