@@ -6,7 +6,7 @@
 
 <MudGrid>
     <MudItem xs="12">
-        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnAddRequirementAsync">Add Requirement</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnNewRequirementAsync">New Requirement</MudButton>
         <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnAddFolderAsync">Add Folder</MudButton>
         <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnRenameFolderAsync">Rename Folder</MudButton>
         <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Error" OnClick="OnDeleteAsync">Delete</MudButton>
@@ -25,6 +25,9 @@
     [Parameter]
     public EventCallback<TreeItemData> OnTreeItemSelected { get; set; }
 
+    [Parameter]
+    public EventCallback OnNewRequirement { get; set; }
+
     private HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
     private TreeItemData _selectedItem; 
 
@@ -38,7 +41,46 @@
         {
             TreeItemData dt = CreateTreeItemData(rootItem.Guid, rootItem.Url, rootItem.FolderName, true);
             TreeItems.Add(dt);
-            Map(rootItem, dt);
+            MapFoldersToTree(rootItem, dt);
+        }
+    }
+
+    public void UpdateTreeWithNewRequirement(Requirement requirement, string requirementFormerUrl)
+    {
+        string displayText = GetDisplayText(requirement);
+        if (string.IsNullOrEmpty(requirementFormerUrl))
+        {
+            TreeItemData newItem = CreateTreeItemData(requirement.Guid, requirement.Url, displayText, false);
+            TreeItemData whereToAddLeaf;
+
+            //Case of adding a req
+            if (_selectedItem.IsFolder)
+            {
+                whereToAddLeaf = _selectedItem;
+            }
+            else
+            {
+                whereToAddLeaf = FindParent(_selectedItem, TreeItems.ElementAt(0));
+                if (whereToAddLeaf == null)
+                {
+                    whereToAddLeaf = TreeItems.ElementAt(0);
+                }
+            }
+
+            whereToAddLeaf.TreeItems.Add(newItem);
+            _selectedItem = newItem;
+            StateHasChanged();
+        }
+        else
+        {
+            //case of modifying a req
+            TreeItemData foundTID = FindInTreeFromUrl(requirementFormerUrl, TreeItems.ElementAt(0));
+            if (foundTID == null)
+            {
+                throw new NotImplementedException("The requirement you are modifying couldn't be found");
+            }
+            foundTID.Url = requirement.Url;
+            foundTID.DisplayText = displayText;
         }
     }
 
@@ -49,14 +91,9 @@
         OnTreeItemSelected.InvokeAsync(selectedValue);
     }
 
-   private async Task OnAddRequirementAsync()
+   private async Task OnNewRequirementAsync()
     {
-        /*await FlushValues();
-        model.Title = string.Concat(Helpers.ReqAndProcProperties.ReqPrefix, "#");
-        selectedRequirement = new Requirement()
-        {
-            Title = model.Title
-        };*/
+        OnNewRequirement.InvokeAsync();
     }
 
     private async Task OnAddFolderAsync()
@@ -120,12 +157,12 @@
         }
     }
 
-    private void Map(Folder sourceFolder, TreeItemData tid)
+    private void MapFoldersToTree(Folder sourceFolder, TreeItemData tid)
     {
-
         foreach (Requirement req in sourceFolder.FolderItems)
         {
-            TreeItemData dt = CreateTreeItemData(req.Guid, req.Url, string.Concat(req.Id, " ", req.Title), false);
+            string displayText = GetDisplayText(req);
+            TreeItemData dt = CreateTreeItemData(req.Guid, req.Url, displayText, false);
             tid.TreeItems.Add(dt);
         }
 
@@ -134,7 +171,7 @@
         {
             TreeItemData dt = CreateTreeItemData(folder.Guid, folder.Url, folder.FolderName, true);
             tid.TreeItems.Add(dt);
-            Map(folder, dt);
+            MapFoldersToTree(folder, dt);
         }
     }
 
@@ -195,11 +232,11 @@
         return await dialog.Result;
     }
 
-  private void AddToTree(string newFolderUrl, string proposedFolderName)
+    private void AddToTree(string newFolderUrl, string proposedFolderName)
     {
         TreeItemData dt = CreateTreeItemData(string.Empty, newFolderUrl, proposedFolderName, true);
 
-        TreeItemData folderObj = FindFolderFromUrl(_selectedItem.Url, TreeItems.ElementAt(0));
+        TreeItemData folderObj = FindInTreeFromUrl(_selectedItem.Url, TreeItems.ElementAt(0));
 
         if (folderObj == null)
         {
@@ -212,7 +249,7 @@
 
     private void RenameInTree(string newFolderName, string newFolderUrl)
     {
-        TreeItemData folderObj = FindFolderFromUrl(_selectedItem.Url, TreeItems.ElementAt(0));
+        TreeItemData folderObj = FindInTreeFromUrl(_selectedItem.Url, TreeItems.ElementAt(0));
         if (folderObj != null)
         {
             folderObj.Url = newFolderUrl;
@@ -244,7 +281,7 @@
         }
     }
 
-    private TreeItemData FindFolderFromUrl(string url, TreeItemData startPoint)
+    private TreeItemData FindInTreeFromUrl(string url, TreeItemData startPoint)
     {
         if (startPoint.Url == url)
         {
@@ -254,7 +291,7 @@
         {
             foreach (TreeItemData fd in startPoint.TreeItems)
             {
-                TreeItemData foundFolder = FindFolderFromUrl(url, fd);
+                TreeItemData foundFolder = FindInTreeFromUrl(url, fd);
                 if (foundFolder != null)
                 {
                     return foundFolder;
@@ -291,5 +328,10 @@
     private static bool IsValidFolderSelection(TreeItemData selectedItem)
     {
         return selectedItem != null && selectedItem.Url != Helpers.ReqAndProcProperties.RootFolderName;
+    }
+
+    private static string GetDisplayText(Requirement req)
+    {
+        return string.Concat(req.Id, " ", req.Title);
     }
 }

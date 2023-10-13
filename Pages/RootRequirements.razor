@@ -23,7 +23,8 @@
         }
         <MudItem xs="4">
             <MudPaper>
-                <FileBrowser OnTreeItemSelected="OnTreeItemSelected" />
+                <FileBrowser @ref="fileBrowser" OnTreeItemSelected="OnTreeItemSelectedAsync" 
+                                                OnNewRequirement="OnNewRequirementAsync" />
             </MudPaper>
         </MudItem>
 
@@ -43,7 +44,7 @@
                                             @bind-Value="model.Title" For="@(() => model.Title)"/>
                         </MudItem>
                         <MudItem xs="4">
-                            <MudCheckBox @bind-value="model.IsSafety" For="@(() => model.IsSafety)">Safety Risk</MudCheckBox>
+                            <MudCheckBox @bind-Checked="model.IsSafety" For="@(() => model.IsSafety)">Safety Risk</MudCheckBox>
                         </MudItem>
                         <MudItem xs="8">
                             <MudSelect Placeholder="Type of Requirement" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
@@ -114,6 +115,8 @@
 
 
 @code {
+    FileBrowser fileBrowser;    //Reference to the file browser
+
     MarkdownEditor mdDescription;
     MarkdownEditor mdChangelog;
 
@@ -129,7 +132,7 @@
     List<string> selectedComponents = new List<string>();
     List<string> selectedSU = new List<string>();
 
-    private void OnTreeItemSelected(TreeItemData selectedValue)
+    private async Task OnTreeItemSelectedAsync(TreeItemData selectedValue)
     {
         _selectedItem = selectedValue;
 
@@ -139,7 +142,31 @@
             selectedRequirement = selectedReq;
 
             MapRequirementToModel(selectedReq);
+            await mdDescription.SetValueAsync(selectedReq.Description);
+            await mdChangelog.SetValueAsync(selectedReq.Changelog);
         }
+    }
+
+    private async Task OnNewRequirementAsync()
+    {
+        model.Components.Clear();
+        model.Changelog = string.Empty;
+        model.Description = string.Empty;
+        model.Title = string.Empty;
+        model.CreatedInVersion = string.Empty;
+        model.DeprecatedInVersion = string.Empty;
+        model.SoftwareUnits.Clear();
+        model.AssociatedProtocolsIds = string.Empty;
+        model.TypeOfRequirement = string.Empty;
+        model.Guid = string.Empty;
+        model.IsSafety = false;
+        model.SRAIds = string.Empty;
+
+        selectedComponents.Clear();
+        selectedSU.Clear();     
+        selectedRequirement = null;  
+        await mdDescription.SetValueAsync(string.Empty);
+        await mdChangelog.SetValueAsync(string.Empty);
     }
 
     private async Task OnSelectComponentsAsync()
@@ -169,16 +196,6 @@
     }
 
     private  void UnselectSU(MudChip chip) => selectedSU.Remove(chip.Text);
-
-    private async Task FlushValues()
-    {
-        model.Title = string.Empty;
-        model.Description = string.Empty;
-        model.Changelog = string.Empty;
-
-        await mdDescription.SetValueAsync(model.Description);
-        await mdChangelog.SetValueAsync(model.Changelog);
-    }
 
     Task OnMarkdownDescrChanged(string value)
     {
@@ -220,12 +237,22 @@
         {
             folderUrl = _selectedItem.Url;
         }
-        else
+        else if (_selectedItem == null)
         {
             folderUrl = Helpers.FilesSettings.RequirementsFolderLocation;
         }
+        else
+        {
+            folderUrl = Path.GetDirectoryName(_selectedItem.Url);
+        }
 
-        RR.CreateRequirement(selectedRequirement, folderUrl);
+        string requirementFormerUrl = selectedRequirement.Url;
+
+        string requirementUrl = RR.SaveRequirement(selectedRequirement, folderUrl);
+        if (!string.IsNullOrEmpty(requirementUrl))
+        {
+            fileBrowser.UpdateTreeWithNewRequirement(selectedRequirement, requirementFormerUrl);
+        }
     }
 
     private async Task<DialogResult> DisplayComponentsSelectorDialogAsync(IEnumerable<string> allItems)

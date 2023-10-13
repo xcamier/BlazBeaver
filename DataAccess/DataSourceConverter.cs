@@ -115,7 +115,10 @@ public class DataSourceConverter<T> where T: IReqProt, new()
                 else if (property.PropertyType == typeof(List<string>))
                 {
                     string[] extractedValues = p.Value.Split(",");
-                    property.SetValue(newItem, extractedValues.ToList(), null);
+                    List<string> extractedValuesAsList = extractedValues.ToList();
+                    extractedValuesAsList.RemoveAll(v => string.IsNullOrEmpty(v));
+
+                    property.SetValue(newItem, extractedValuesAsList, null);
                 }
                 else
                 {

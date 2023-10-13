@@ -44,8 +44,11 @@ public class RequirementsRepository : IRequirementsRepository
         }
     }
 
-    public string CreateRequirement(Requirement req, string folderUrl)
+    public string SaveRequirement(Requirement req, string folderUrl)
     {
+        //Saves the previous URL
+        string oldUrl = req.Url;
+
         //Buids the url and adds it to the file
         string reqFileName = string.Concat(Helpers.FileHelpers.CurrationOf(req.Id), FilesSettings.FileExtension);
         string confirmedFolderUrl = folderUrl;
@@ -58,19 +61,18 @@ public class RequirementsRepository : IRequirementsRepository
 
         string requirementAsText = _converter.Convert(req);
 
-        bool requirementSaveSuccessfully = _dataIO.SaveItem(string.Empty, requirementUrl, requirementAsText);
+        bool requirementSaveSuccessfully = _dataIO.SaveItem(oldUrl, requirementUrl, requirementAsText);
 
-        if (!requirementSaveSuccessfully)
+        if (requirementSaveSuccessfully)
+        {
+            UpdateRequirementInCache(req);
+        }
+        else 
         {
             return string.Empty;
         }
 
         return requirementUrl;
-    }
-
-    public bool UpdateRequirement(Requirement req)
-    {
-        throw new NotImplementedException();
     }
 
     public bool DeleteRequirement(string url)
@@ -178,6 +180,19 @@ public class RequirementsRepository : IRequirementsRepository
         folder.SubFolders.Add(fd);
     }
 
+    private void UpdateRequirementInCache(Requirement req)
+    {
+        string requirementFoldeUrl = Path.GetDirectoryName(req.Url);
+        Folder foundFolder = FolderHelpers.FindFolderFromUrl(requirementFoldeUrl, _allRequirementsFolders.ElementAt(0));
+
+        IReqProt foundItem = foundFolder.FolderItems.FirstOrDefault(fi => fi.Url == req.Url);
+        if (foundItem != null)
+        {
+            foundFolder.FolderItems.Remove(foundItem);
+        };
+        foundFolder.FolderItems.Add(req);
+    }
+    
     private Folder FindParentFolder(string url, Folder startPoint, bool fromReq)
     {
         bool found = false; 
