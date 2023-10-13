@@ -126,6 +126,14 @@
     private void OnTreeItemSelected(TreeItemData selectedValue)
     {
         _selectedItem = selectedValue;
+
+        if (!_selectedItem.IsFolder)
+        {
+            Requirement selectedReq = RR.GetRequirement(selectedValue.Url);
+            selectedRequirement = selectedReq;
+
+            MapRequirementToModel(selectedReq);
+        }
     }
 
     private async Task OnSelectComponentsAsync()
@@ -190,6 +198,7 @@
         selectedRequirement.Guid = string.IsNullOrEmpty(formContext.Guid) ? Guid.NewGuid().ToString() : formContext.Guid; 
         selectedRequirement.Id = Helpers.TitleAndIdTransformation.GetId(formContext.Title);
         selectedRequirement.Title = Helpers.TitleAndIdTransformation.GetTitle(formContext.Title);
+        selectedRequirement.TypeOfRequirement = formContext.TypeOfRequirement;
         selectedRequirement.Components = selectedComponents;
         selectedRequirement.SoftwareUnits = selectedSU;
         selectedRequirement.SRAIds = formContext.SRAIds;
@@ -223,5 +232,23 @@
         var dialog = await DialogService.ShowAsync<SettingsSelectorDialog>("Selection", parameters, options);
         
         return await dialog.Result;      
+    }
+
+    private void MapRequirementToModel(Requirement req)
+    {
+        model.Guid = req.Guid;
+        model.Title = string.Concat(req.Id, " ", req.Title);
+        model.IsSafety = req.IsSafety;
+        model.TypeOfRequirement = req.TypeOfRequirement;
+        model.CreatedInVersion = req.CreatedInVersion;
+        model.DeprecatedInVersion = req.DeprecatedInVersion;
+        model.SoftwareUnits = req.SoftwareUnits;
+        selectedSU = req.SoftwareUnits;
+        model.Components = req.Components;
+        selectedComponents = req.Components;
+        model.Changelog = req.Changelog;
+        model.AssociatedProtocolsIds = req.AssociatedProtocolsIds;
+        model.Description = req.Description;
+        model.SRAIds = req.SRAIds;
     }
 }

@@ -9,6 +9,7 @@ public class Requirement: IReqProt
     public string Guid { get; set; } = string.Empty;
     public string Id { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
+    public string TypeOfRequirement { get; set; } = string.Empty;
     public List<string> Components { get; set; } = new List<string>();
     public List<string> SoftwareUnits { get; set; } = new List<string>();
     public string SRAIds { get; set; } = string.Empty;

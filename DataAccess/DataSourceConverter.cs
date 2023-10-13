@@ -19,42 +19,9 @@ public class DataSourceConverter<T> where T: IReqProt, new()
                 string itemAsString = dataIO.LoadItem(itemUrl);
                 if (!string.IsNullOrEmpty(itemAsString))
                 {
-                    //It's a req 
-                    T newItem = new T()
-                    {
-                        Url = itemUrl
-                    };
+                    T newItem = ConvertToT(itemUrl, itemAsString);
 
-                    RequirementParser ps = new RequirementParser();
-                    bool parsingOk = ps.Parse(itemAsString);
-                    if (parsingOk)
-                    {
-                        Type type = typeof(T); 
-                        foreach (var p in ps.Properties)
-                        {
-                            PropertyInfo property = type.GetProperty(p.Key);
-
-                            if (property.PropertyType == typeof(string))
-                            {
-                                property.SetValue(newItem, p.Value, null);
-                            }
-                            else if (property.PropertyType == typeof(bool))
-                            {
-                                property.SetValue(newItem, System.Convert.ToBoolean(p.Value, null));
-                            }
-                            else if (property.PropertyType == typeof(List<string>))
-                            {
-                                string[] extractedValues = p.Value.Split(",");
-                                property.SetValue(newItem, extractedValues.ToList(), null);
-                            }
-                            else
-                            {
-                                Console.WriteLine("DataSourceConverter > Convert: property type not managed");
-                            }
-                        }
-                    }
-
-                    currentFolder.FolderItems.Add(newItem);    
+                    currentFolder.FolderItems.Add(newItem);
                 }
             }
             else
@@ -65,9 +32,9 @@ public class DataSourceConverter<T> where T: IReqProt, new()
         }
 
         return folders;
-    } 
+    }
 
-# region Requirement convertion
+    #region Requirement convertion
 
     public string Convert(Requirement req)
     {
@@ -103,9 +70,61 @@ public class DataSourceConverter<T> where T: IReqProt, new()
         return sb.ToString();
     }
 
+    public T Convert(string itemUrl, string itemContent)
+    {
+        if (string.IsNullOrEmpty(itemUrl))
+        {
+            return new T();
+        }
+        else
+        {
+            return ConvertToT(itemUrl, itemContent);
+        }
+    }
+
     private IEnumerable<string> GetPOCOProperties()
     {
         return typeof(T).GetProperties().Select(p => p.Name);
+    }
+
+   private static T ConvertToT(string itemUrl, string itemAsString)
+    {
+        //It's a req 
+        T newItem = new T()
+        {
+            Url = itemUrl
+        };
+
+        RequirementParser ps = new RequirementParser();
+        bool parsingOk = ps.Parse(itemAsString);
+        if (parsingOk)
+        {
+            Type type = typeof(T);
+            foreach (var p in ps.Properties)
+            {
+                PropertyInfo property = type.GetProperty(p.Key);
+
+                if (property.PropertyType == typeof(string))
+                {
+                    property.SetValue(newItem, p.Value, null);
+                }
+                else if (property.PropertyType == typeof(bool))
+                {
+                    property.SetValue(newItem, System.Convert.ToBoolean(p.Value, null));
+                }
+                else if (property.PropertyType == typeof(List<string>))
+                {
+                    string[] extractedValues = p.Value.Split(",");
+                    property.SetValue(newItem, extractedValues.ToList(), null);
+                }
+                else
+                {
+                    Console.WriteLine("DataSourceConverter > Convert: property type not managed");
+                }
+            }
+        }
+
+        return newItem;
     }
 
 #endregion Requirement convertion

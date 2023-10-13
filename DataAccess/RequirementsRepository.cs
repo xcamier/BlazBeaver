@@ -28,9 +28,20 @@ public class RequirementsRepository : IRequirementsRepository
         return requirements;
     }
 
-    public Requirement GetRequirement(string reqId)
+    public Requirement GetRequirement(string url)
     {
-        throw new NotImplementedException();
+        string requirementAsString = _dataIO.LoadItem(url);
+
+        if (string.IsNullOrEmpty(requirementAsString))
+        {
+            return new Requirement();
+        }
+        else
+        {
+            Requirement requirement = _converter.Convert(url, requirementAsString);
+            
+            return requirement;
+        }
     }
 
     public string CreateRequirement(Requirement req, string folderUrl)

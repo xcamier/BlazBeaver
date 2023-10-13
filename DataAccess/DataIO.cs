@@ -19,9 +19,16 @@ public class DataIO : IDataIO
     {
         try
         {
-            using (StreamReader sr = new StreamReader(url))
+            if (File.Exists(url))
             {
-                return sr.ReadToEnd();
+                using (StreamReader sr = new StreamReader(url))
+                {
+                    return sr.ReadToEnd();
+                }
+            }
+            else
+            {
+                return string.Empty;
             }
         }
         catch
