@@ -6,6 +6,7 @@
 @using BlazBeaver.Components;
 @using System.Text;
 
+@inject ISnackbar Snackbar
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
 @inject IBasicsSettingsRepository BS;
@@ -284,9 +285,14 @@
         string requirementFormerUrl = selectedRequirement.Url;
 
         string requirementUrl = RR.SaveRequirement(selectedRequirement, folderUrl);
-        if (!string.IsNullOrEmpty(requirementUrl))
+        if (string.IsNullOrEmpty(requirementUrl))
+        {
+            Snackbar.Add("Saving didn't go as expected. Please check your git diff.", Severity.Success);
+        }
+        else
         {
             fileBrowser.UpdateTreeWithNewRequirement(selectedRequirement, requirementFormerUrl);
+            Snackbar.Add("Requirement saved.", Severity.Success);
         }
     }
 
