@@ -32,6 +32,7 @@ builder.Services.AddSingleton<IDataIO, DataIO>();
 builder.Services.AddSingleton<DataSourceConverter<Requirement>>();
 builder.Services.AddSingleton<IRequirementsRepository, RequirementsRepository>();
 builder.Services.AddSingleton<IBasicsSettingsRepository, BasicSettingsRepository>();
+builder.Services.AddSingleton<ISearchRequirements, SearchRequirements>();
 
 var app = builder.Build();
 

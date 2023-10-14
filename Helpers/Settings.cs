@@ -22,4 +22,13 @@ public static class ReqAndProcProperties
     {
         "Url"
     };
+
+    public static readonly IEnumerable<string> SearchTypes = new List<string>()
+    {
+        "Components",
+        "Software Units",
+        "Protocols",
+        "Number",
+        "Title"
+    };
 }

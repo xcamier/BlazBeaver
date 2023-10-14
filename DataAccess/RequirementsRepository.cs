@@ -28,6 +28,11 @@ public class RequirementsRepository : IRequirementsRepository
         return requirements;
     }
 
+    public IEnumerable<Folder> GetAllCachedRequirements()
+    {
+        return _allRequirementsFolders;
+    }
+
     public Requirement GetRequirement(string url)
     {
         string requirementAsString = _dataIO.LoadItem(url);

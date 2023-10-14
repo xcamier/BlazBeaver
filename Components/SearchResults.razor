@@ -1,0 +1,40 @@
+﻿@using Data;
+
+@if (FoundRequirements.Any())
+{
+    <MudTable @ref="mudTable" T="Requirement" 
+                                Items="@FoundRequirements" Dense="true" Striped="true" Hover="true" 
+                                OnRowClick="RowClickEvent">
+        <HeaderContent>
+            <MudTh>Id</MudTh>
+            <MudTh>Title</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Id">@context.Id</MudTd>
+            <MudTd DataLabel="Title">@context.Title</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{ 10 }" />
+        </PagerContent>
+    </MudTable>
+}
+else
+{
+    <MudText>No result to display</MudText>
+}
+
+@code {
+    [Parameter]
+    public EventCallback<Requirement> OnSearchResultSelected { get; set; }
+
+    [Parameter]
+    public IEnumerable<Requirement> FoundRequirements { get; set;} = new List<Requirement>();
+
+    private MudTable<Requirement> mudTable;
+
+    private void RowClickEvent(TableRowClickEventArgs<Requirement> tableRowClickEventArgs)
+    {
+        OnSearchResultSelected.InvokeAsync(tableRowClickEventArgs.Item);
+    }
+
+}

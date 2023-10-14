@@ -7,8 +7,7 @@
     <DialogContent>
         <MudGrid>
             <MudItem xs="12">
-                @string.Join(',', SelectedItems)
-                <MudTable @ref="_table" T="string" Dense="true"  Striped="true" Hover="true"
+                <MudTable @ref="_table" T="string" Dense="true" Striped="true" Hover="true"
                                         Items="@AllItems" MultiSelection="true" @bind-SelectedItems="tmpSelection"
                                         Filter="new Func<string,bool>(FilterFunc)">
                     <ToolBarContent>

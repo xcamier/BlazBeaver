@@ -1,0 +1,112 @@
+﻿@using Data;
+@using Interfaces;
+
+@inject IBasicsSettingsRepository BS;
+
+<MudRadioGroup @bind-SelectedOption="@andOrGrouping">
+    <MudRadio Option="@("AND")" Color="Color.Primary">AND</MudRadio>
+    <MudRadio Option="@("OR")" Color="Color.Primary">OR</MudRadio>
+</MudRadioGroup>
+
+<MudGrid>
+    @foreach (var searchCriterion in searchCriteria)
+    {
+        <MudItem xs="3">
+            <MudSelect Placeholder="Type of Property" @bind-Value="@searchCriterion.TypeOfCriterion">
+                @foreach (string typeOfProperty in Helpers.ReqAndProcProperties.SearchTypes)
+                {
+                    <MudSelectItem Value=@typeOfProperty />
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="7">
+            @if (searchCriterion.TypeOfCriterion == "Protocols" || searchCriterion.TypeOfCriterion == "Number")
+            {
+                <MudTextField @bind-Value="@searchCriterion.Criterion" />
+            }
+            else if (searchCriterion.TypeOfCriterion == "Software Units")
+            {
+                <MudAutocomplete T="string"  @bind-Value="searchCriterion.Criterion" SearchFunc="@SearchOnSU"
+                            ResetValueOnEmptyText="true"
+                            CoerceText="false" CoerceValue="false" />
+            }
+            else if (searchCriterion.TypeOfCriterion == "Components")
+            {
+                <MudAutocomplete T="string"  @bind-Value="searchCriterion.Criterion" SearchFunc="@SearchOnComponent"
+                            ResetValueOnEmptyText="true"
+                            CoerceText="false" CoerceValue="false" />  
+            }
+        </MudItem>
+        <MudItem xs="2">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary"
+                            Size="Size.Medium" OnClick="OnAddCriterion"></MudIconButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Remove" Color="Color.Primary" 
+                            Size="Size.Medium" OnClick="(() => OnRemoveCriterion(searchCriterion))"></MudIconButton>
+        </MudItem>
+    }
+    <MudItem xs="12">
+        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnSearch">Search</MudButton>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    [Parameter]
+    public EventCallback<SearchInstructions> RunSearch { get; set; }
+
+    string andOrGrouping = "AND";   
+    List<SearchCriterion> searchCriteria = new List<SearchCriterion>() { new SearchCriterion() };
+    IEnumerable<string> allSU = new List<string>();
+    IEnumerable<string> allComponents = new List<string>();
+
+    protected override void OnInitialized()
+    {
+        allSU = BS.GetAll(Helpers.FilesSettings.SoftwareUnitsSetting);
+        allComponents = BS.GetAll(Helpers.FilesSettings.ComponentsSetting);
+    }
+
+        private void OnAddCriterion()
+    {
+        SearchCriterion newCrit = new SearchCriterion();
+        searchCriteria.Add(newCrit);
+    }
+
+    private void OnRemoveCriterion(SearchCriterion crit)
+    {
+        if (searchCriteria.Count > 1)
+        {
+            searchCriteria.Remove(crit);
+        }
+    }
+    
+    private void OnSearch()
+    {
+        SearchInstructions si = new SearchInstructions()
+        {
+            IsAnd = andOrGrouping == "AND",
+            AllCriteria = searchCriteria
+        };
+
+        RunSearch.InvokeAsync(si);
+    }
+
+    private async Task<IEnumerable<string>> SearchOnComponent(string value)
+    {
+        return SearchOnCollection(value, allComponents);
+    }
+
+    private async Task<IEnumerable<string>> SearchOnSU(string value)
+    {
+        return SearchOnCollection(value, allSU);
+    }
+
+    private IEnumerable<string> SearchOnCollection(string value, IEnumerable<string> collection)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return collection;
+        }
+
+        return collection.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));  
+    }
+}
