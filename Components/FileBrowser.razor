@@ -1,24 +1,37 @@
 ﻿@using BlazBeaver.Data;
 @using BlazBeaver.Interfaces;
 
+
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
 
 <MudGrid>
-    <MudItem xs="12">
-        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnNewRequirementAsync">New Requirement</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnAddFolderAsync">Add Folder</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnRenameFolderAsync">Rename Folder</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Error" OnClick="OnDeleteAsync">Delete</MudButton>
-    </MudItem>
-    <MudItem xs="12">
-        <MudTreeView Items="@TreeItems" T="TreeItemData" Dense="true" Hover="true" ExpandOnDoubleClick="true" SelectedValueChanged="OnSelectedValueAsync">
-            <ItemTemplate Context="treeContext">
-                <MudTreeViewItem @bind-Expanded="@treeContext.IsExpanded" Items="@treeContext.TreeItems" Value="@treeContext"
-                    Icon="@treeContext.Icon" Text="@treeContext.DisplayText"/>
-            </ItemTemplate>
-        </MudTreeView>
-    </MudItem>
+    @if (loading)
+    {
+        <MudItem xs="12">
+            <MudStack Justify="Justify.Center" Row="true">
+                <MudProgressCircular  Color="Color.Info" Indeterminate="true" />
+                <MudText>Loading requirements</MudText>
+            </MudStack>
+        </MudItem>
+    }
+    else
+    {
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnNewRequirementAsync">New Requirement</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnAddFolderAsync">Add Folder</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnRenameFolderAsync">Rename Folder</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Error" OnClick="OnDeleteAsync">Delete</MudButton>
+        </MudItem>
+        <MudItem xs="12">
+            <MudTreeView Items="@TreeItems" T="TreeItemData" Dense="true" Hover="true" ExpandOnDoubleClick="true" SelectedValueChanged="OnSelectedValueAsync">
+                <ItemTemplate Context="treeContext">
+                    <MudTreeViewItem @bind-Expanded="@treeContext.IsExpanded" Items="@treeContext.TreeItems" Value="@treeContext"
+                        Icon="@treeContext.Icon" Text="@treeContext.DisplayText"/>
+                </ItemTemplate>
+            </MudTreeView>
+        </MudItem>
+    }
 </MudGrid>
 
 @code {
@@ -28,21 +41,57 @@
     [Parameter]
     public EventCallback OnNewRequirement { get; set; }
 
+    [Parameter]
+    public EventCallback OnLoading { get; set; }
+
+    [Parameter]
+    public EventCallback<Dictionary<string, int>> OnLoaded { get; set; }
+
+    private bool loading = true;
+
     private HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
-    private TreeItemData _selectedItem; 
+    private TreeItemData _selectedItem;
 
-    protected override void OnInitialized()
+    private string state = "";
+
+    protected override void OnAfterRender(bool firstRender)
     {
-        IEnumerable<Folder> allReqs =  RR.GetAllRequirements();
-        
-        var rootItem = allReqs.FirstOrDefault();
-
-        if (rootItem != null)
+        //Allows to display the page quickly then to run the progress item
+        if (firstRender)
         {
-            TreeItemData dt = CreateTreeItemData(rootItem.Guid, rootItem.Url, rootItem.FolderName, true);
-            TreeItems.Add(dt);
-            MapFoldersToTree(rootItem, dt);
+            try
+            {
+                loading = true;
+                OnLoading.InvokeAsync();
+
+                IEnumerable<Folder> allReqs =  RR.GetAllRequirements();
+                
+                var rootItem = allReqs.FirstOrDefault();
+
+                if (rootItem != null)
+                {
+                    TreeItemData dt = CreateTreeItemData(rootItem.Guid, rootItem.Url, rootItem.FolderName, true);
+                    TreeItems.Add(dt);
+                    MapFoldersToTree(rootItem, dt);
+                }
+            }
+            finally
+            {
+                loading = false;            
+                StateHasChanged();
+
+                Dictionary<string,int> stats = new Dictionary<string, int>();
+                int cumulReqs = 0;
+                int cumulFolders = 0;
+                GetStatistics(TreeItems.ElementAt(0), ref cumulReqs, ref cumulFolders);
+                stats.Add("TotalReqs", cumulReqs);
+                stats.Add("TotalFolders", cumulFolders);
+
+                OnLoaded.InvokeAsync(stats);
+            }
         }
+
+        base.OnAfterRender(firstRender);
     }
 
     public void UpdateTreeWithNewRequirement(Requirement requirement, string requirementFormerUrl)
@@ -52,6 +101,11 @@
         {
             TreeItemData newItem = CreateTreeItemData(requirement.Guid, requirement.Url, displayText, false);
             TreeItemData whereToAddLeaf;
+
+            if (_selectedItem == null)
+            {
+                _selectedItem = TreeItems.ElementAt(0);
+            }
 
             //Case of adding a req
             if (_selectedItem.IsFolder)
@@ -333,5 +387,15 @@
     private static string GetDisplayText(Requirement req)
     {
         return string.Concat(req.Id, " ", req.Title);
+    }
+
+    private static void GetStatistics(TreeItemData startPoint, ref int cumulReqs, ref int cumulFolders)
+    {
+        cumulReqs += !startPoint.IsFolder ? 1 : 0;
+        cumulFolders += startPoint.IsFolder ? 1 : 0;
+        foreach (TreeItemData subItems in startPoint.TreeItems)
+        {
+            GetStatistics(subItems, ref cumulReqs, ref cumulFolders);
+        }
     }
 }

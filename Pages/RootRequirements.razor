@@ -4,6 +4,7 @@
 @using System.ComponentModel.DataAnnotations;
 @using BlazBeaver.Interfaces;
 @using BlazBeaver.Components;
+@using System.Text;
 
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
@@ -11,33 +12,52 @@
 
 <PageTitle>Requirements</PageTitle>
 
-<h1>Requirements</h1>
 
-<EditForm Model="@model" OnValidSubmit="OnValidSubmit">
-    <MudGrid>
-        @if (@loadingError)
-        {
-            <MudItem xs="12">
-                <MudAlert Severity="Severity.Error" Variant="Variant.Filled">Meltdown is imminent</MudAlert>
-            </MudItem>
-        }
-        <MudItem xs="4">
-            <MudPaper>
-                <FileBrowser @ref="fileBrowser" OnTreeItemSelected="OnTreeItemSelectedAsync" 
-                                                OnNewRequirement="OnNewRequirementAsync" />
-            </MudPaper>
+
+<MudGrid>
+    @if (@loadingError)
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Error" Variant="Variant.Filled">Error vhen loading the requirements</MudAlert>
         </MudItem>
+    }
+    <MudItem xs="12">
+        <MudText Typo="Typo.h5">Requirements</MudText>
+    </MudItem>
+    <MudItem xs="4">
+        <MudPaper>
+            <FileBrowser @ref="fileBrowser" OnTreeItemSelected="OnTreeItemSelectedAsync" 
+                                            OnNewRequirement="OnNewRequirementAsync"
+                                            OnLoading="OnRequirementsLoading"
+                                            OnLoaded="OnRequirementsLoaded" />
+        </MudPaper>
+    </MudItem>
 
-        <MudItem xs="8">
-            <MudCard>
-                @if (@loadingError)
+    <MudItem xs="8" >
+        <MudPaper style="padding-left: 1em; padding-right: 1em">
+            @if (_selectedItem == null || _selectedItem.IsFolder)
+            {
+                @if (requirementsAreLoading)
                 {
-                    <MudCardHeader>
-                        <MudText>Error when loading the req</MudText>
-                    </MudCardHeader>
+                    <MudText Typo="Typo.body1">Please wait...</MudText>
                 }
-
-                <MudCardContent>
+                else
+                {   
+                    @if (rootRequirementsFolderInfo == null)
+                    {
+                        <MudText Typo="Typo.body1">You are on a folder, please select a requirement.</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body1"><b>Requirements statistics:</b></MudText>
+                        <MudText Typo="Typo.body1">@rootRequirementsFolderInfo["TotalReqs"] requirements found</MudText>
+                        <MudText Typo="Typo.body1">Those requirements are contained in @rootRequirementsFolderInfo["TotalFolders"] folders or subfolders.</MudText>
+                    }
+                }
+            }
+            else
+            {
+                <EditForm Model="@model" OnValidSubmit="OnValidSubmit">
                     <MudGrid>
                         <MudItem xs="12">
                             <MudTextField Label="Title" Required="true" RequiredError="Requirement title is required!" 
@@ -59,15 +79,20 @@
                             </MudSelect>
                         </MudItem>
                         <MudItem xs="12">
-                           <MudTextField Label="SRA Ids" Required="false"
+                            <MudText>Requirement Description</MudText>
+                            <MarkdownEditor @bind-Value="@model.Description"
+                                            @ref="mdDescription" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Label="SRA Ids" Required="false"
                                             @bind-Value="model.SRAIds" For="@(() => model.SRAIds)"/>
                         </MudItem>
                         <MudItem xs="6">
-                           <MudTextField Label="Created in version" Required="false"
+                            <MudTextField Label="Created in version" Required="false"
                                             @bind-Value="model.CreatedInVersion" For="@(() => model.CreatedInVersion)"/>
                         </MudItem>
                         <MudItem xs="6">
-                           <MudTextField Label="Deprecated in version" Required="false"
+                            <MudTextField Label="Deprecated in version" Required="false"
                                             @bind-Value="model.DeprecatedInVersion" For="@(() => model.DeprecatedInVersion)"/>
                         </MudItem>
                         <MudItem xs="6">
@@ -89,9 +114,8 @@
                             Software Units <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnSelectSUsAsync"></MudIconButton>
                         </MudItem>
                         <MudItem xs="12">
-                            <MudText>Requirement Description</MudText>
-                            <MarkdownEditor @bind-Value="@model.Description"
-                                            @ref="mdDescription" />
+                            <MudTextField Label="Protocols Ids" Required="false"
+                                            @bind-Value="model.AssociatedProtocolsIds" For="@(() => model.AssociatedProtocolsIds)"/>
                         </MudItem>
                         <MudItem xs="12">
                             <MudText>Requirement Changelog</MudText>
@@ -99,19 +123,15 @@
                                             @ref="mdChangelog" />
                         </MudItem>
                         <MudItem xs="12">
-                           <MudTextField Label="Protocols Ids" Required="false"
-                                            @bind-Value="model.AssociatedProtocolsIds" For="@(() => model.AssociatedProtocolsIds)"/>
+                            <MudButton  MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Save</MudButton>
                         </MudItem>
                     </MudGrid>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton  MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Save</MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
-        
-    </MudGrid>
-</EditForm>
+                </EditForm>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
 
 
 @code {
@@ -124,6 +144,9 @@
 
     string[] errors = { };
 
+    bool requirementsAreLoading = false;
+    Dictionary<string, int> rootRequirementsFolderInfo = null;
+
     bool loadingError = false;
 
     RequirementEditionForm model = new RequirementEditionForm();
@@ -134,6 +157,7 @@
 
     private async Task OnTreeItemSelectedAsync(TreeItemData selectedValue)
     {
+        rootRequirementsFolderInfo = null;
         _selectedItem = selectedValue;
 
         if (!_selectedItem.IsFolder)
@@ -179,6 +203,17 @@
             HashSet<string> results = result.Data as HashSet<string> ?? new HashSet<string>();
             selectedComponents.AddRange(results.ToList());
         }
+    }
+
+    private void OnRequirementsLoading()
+    {
+        requirementsAreLoading = true;
+    }
+
+    private void OnRequirementsLoaded(Dictionary<string, int> stats)
+    {
+        rootRequirementsFolderInfo = stats;
+        requirementsAreLoading = false;
     }
 
     private void UnselectComponent(MudChip chip) => selectedComponents.Remove(chip.Text);

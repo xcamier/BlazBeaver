@@ -9,7 +9,5 @@ namespace BlazBeaver.Data;
         public string Icon { get; set; } = string.Empty;
         public bool IsExpanded { get; set; }
 
-        public bool HasChild => TreeItems != null && TreeItems.Count > 0;
-
         public HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
     }

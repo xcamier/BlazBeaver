@@ -22,7 +22,7 @@ public class RequirementsRepository : IRequirementsRepository
     {
         IEnumerable<string> rawRequirements = _dataIO.LoadAll(Helpers.FilesSettings.RequirementsFolderLocation, Helpers.FilesSettings.FileExtension);
         IEnumerable<Folder> requirements = _converter.Convert(rawRequirements, _dataIO);
-        
+
         _allRequirementsFolders = requirements;
 
         return requirements;
@@ -184,6 +184,12 @@ public class RequirementsRepository : IRequirementsRepository
     {
         string requirementFoldeUrl = Path.GetDirectoryName(req.Url);
         Folder foundFolder = FolderHelpers.FindFolderFromUrl(requirementFoldeUrl, _allRequirementsFolders.ElementAt(0));
+
+        //if none is found, pick the first one
+        if (foundFolder == null)
+        {
+            foundFolder = _allRequirementsFolders.ElementAt(0);
+        }
 
         IReqProt foundItem = foundFolder.FolderItems.FirstOrDefault(fi => fi.Url == req.Url);
         if (foundItem != null)
