@@ -1,7 +1,6 @@
 ﻿@using BlazBeaver.Data;
 @using BlazBeaver.Interfaces;
 
-
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
 
@@ -51,8 +50,6 @@
 
     private HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
     private TreeItemData _selectedItem;
-
-    private string state = "";
 
     protected override void OnAfterRender(bool firstRender)
     {
