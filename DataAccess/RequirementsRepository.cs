@@ -6,6 +6,9 @@ namespace BlazBeaver.DataAccess;
 
 public class RequirementsRepository : IRequirementsRepository
 {
+    public event EventHandler OnStartLoadingRequirements;
+    public event EventHandler OnEndLoadingRequirements;
+
     private IEnumerable<Folder> _allRequirementsFolders;
 
     private readonly IDataIO _dataIO;
@@ -20,12 +23,21 @@ public class RequirementsRepository : IRequirementsRepository
 #region Requirements management
     public IEnumerable<Folder> GetAllRequirements()
     {
-        IEnumerable<string> rawRequirements = _dataIO.LoadAll(Helpers.FilesSettings.RequirementsFolderLocation, Helpers.FilesSettings.FileExtension);
-        IEnumerable<Folder> requirements = _converter.Convert(rawRequirements, _dataIO);
+        try
+        {
+            RaiseEvent(OnStartLoadingRequirements);
 
-        _allRequirementsFolders = requirements;
+            IEnumerable<string> rawRequirements = _dataIO.LoadAll(Helpers.FilesSettings.RequirementsFolderLocation, Helpers.FilesSettings.FileExtension);
+            IEnumerable<Folder> requirements = _converter.Convert(rawRequirements, _dataIO);
 
-        return requirements;
+            _allRequirementsFolders = requirements;
+
+            return requirements;
+        }
+        finally
+        {
+            RaiseEvent(OnEndLoadingRequirements);
+        }
     }
 
     public IEnumerable<Folder> GetAllCachedRequirements()
@@ -105,6 +117,21 @@ public class RequirementsRepository : IRequirementsRepository
         }
 
         return deletionSuccessful;
+    }
+
+    private void RaiseEvent(EventHandler eventToRaise)
+    {
+        // Make a temporary copy of the event to avoid possibility of
+        // a race condition if the last subscriber unsubscribes
+        // immediately after the null check and before the event is raised.
+        EventHandler raiseEvent = eventToRaise;
+
+        // Event will be null if there are no subscribers
+        if (raiseEvent != null)
+        {
+            // Call to raise the event.
+            raiseEvent(this, new EventArgs());
+        }
     }
 
 #endregion Requirements management

@@ -1,5 +1,10 @@
 namespace BlazBeaver.Helpers;
 
+public static class AppSettings
+{
+    public const bool DisplayBrowser = false;
+}
+
 public static class FilesSettings
 {
     public const string RequirementsFolderLocation = "/Users/xavier/Developer/testFolder/Requirements";

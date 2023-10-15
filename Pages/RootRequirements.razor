@@ -6,6 +6,8 @@
 @using BlazBeaver.Components;
 @using System.Text;
 
+@implements IDisposable
+
 @inject ISnackbar Snackbar
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
@@ -14,55 +16,81 @@
 
 <PageTitle>Requirements</PageTitle>
 
-<MudGrid>
+<MudGrid >
     @if (@loadingError)
     {
         <MudItem xs="12">
             <MudAlert Severity="Severity.Error" Variant="Variant.Filled">Error vhen loading the requirements</MudAlert>
         </MudItem>
     }
+
     <MudItem xs="12">
         <MudText Typo="Typo.h5">Requirements</MudText>
     </MudItem>
-    <MudItem xs="4">
-        <MudPaper>
-            <FileBrowser @ref="fileBrowser" OnTreeItemSelected="OnTreeItemSelectedAsync" 
-                                            OnNewRequirement="OnNewRequirementAsync"
-                                            OnLoading="OnRequirementsLoading"
-                                            OnLoaded="OnRequirementsLoaded" />
-        </MudPaper>
-    </MudItem>
+
+    @if (Helpers.AppSettings.DisplayBrowser)
+    {
+        <MudItem xs="4">
+            <MudPaper>
+                <FileBrowser @ref="fileBrowser" OnTreeItemSelected="OnTreeItemSelectedAsync" 
+                                                OnNewRequirement="OnNewRequirementAsync"
+                                                OnLoading="OnTreeLoading"
+                                                OnLoaded="OnTreeLoaded" />
+            </MudPaper>
+        </MudItem>
+    }
+    else
+    {
+        <!-- Very unelegant way to center the details panel 
+             I have tried with some CSS but either there is a bug
+             or my competency is too limited (which is highly probable -->
+        <MudItem xs="2" />
+    }
 
     <MudItem xs="8" >
         <MudStack>
             <MudExpansionPanels MultiExpansion="true">
-                <MudExpansionPanel Text="Search">
-                    <Search RunSearch="OnSearch" />
-                </MudExpansionPanel>
-                <MudExpansionPanel Text="Search Results" IsExpanded="@searchResultsExpanded" IsExpandedChanged="OnSearchResultsExpansionChanged">
-                    <SearchResults FoundRequirements="@foundRequirements" OnSearchResultSelected="OnSearchResultSelectedAsync" />
-                </MudExpansionPanel>
-                <MudExpansionPanel Text="Details" IsExpanded="@detailsExpanded" IsExpandedChanged="OnDetailsExpansionChanged">
+                
+                <!-- Displays the loading progress only if not already displayed in the browser -->
+                @if(loadingInProgress && !Helpers.AppSettings.DisplayBrowser)
+                {
+                    <MudExpansionPanel Text="Loading..." IsExpanded="true">
+                        <LoadingPanel />
+                    </MudExpansionPanel>
+                }
 
-                    @if (_selectionMode == SelectionMode.NoSelection || (_selectionMode == SelectionMode.SelectedFromTree && (_selectedItem == null || _selectedItem.IsFolder)))
+                @if(!loadingInProgress)
+                {
+                    <MudExpansionPanel Text="Search">
+                        <Search RunSearch="OnSearch" OnNewRequirement="OnNewRequirementAsync" />
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Search Results" IsExpanded="@searchResultsExpanded" IsExpandedChanged="OnSearchResultsExpansionChanged">
+                        <SearchResults FoundRequirements="@foundRequirements" OnSearchResultSelected="OnSearchResultSelectedAsync" />
+                    </MudExpansionPanel>
+                }
+
+                <MudExpansionPanel Text="Details" IsExpanded="@detailsExpanded" IsExpandedChanged="OnDetailsExpansionChanged">
+                    
+                    @if (loadingInProgress)
                     {
-                        @if (requirementsAreLoading)
+                        <MudText Typo="Typo.body1">Please wait...</MudText>
+                    }
+                    else if (_selectionMode == SelectionMode.NoSelection && _requirementState != RequirementState.New)
+                    {
+                        @if (requirementsStatistics != null)
                         {
-                            <MudText Typo="Typo.body1">Please wait...</MudText>
+                            <MudText Typo="Typo.body1"><b>Requirements statistics:</b></MudText>
+                            <MudText Typo="Typo.body1">@requirementsStatistics["TotalReqs"] requirements found</MudText>
+                            <MudText Typo="Typo.body1">Those requirements are contained in @requirementsStatistics["TotalFolders"] folders or subfolders.</MudText>
                         }
                         else
-                        {   
-                            @if (rootRequirementsFolderInfo == null)
-                            {
-                                <MudText Typo="Typo.body1">You are on a folder, please select a requirement.</MudText>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.body1"><b>Requirements statistics:</b></MudText>
-                                <MudText Typo="Typo.body1">@rootRequirementsFolderInfo["TotalReqs"] requirements found</MudText>
-                                <MudText Typo="Typo.body1">Those requirements are contained in @rootRequirementsFolderInfo["TotalFolders"] folders or subfolders.</MudText>
-                            }
+                        {
+                            <MudText Typo="Typo.body1">Case not managed, I don't know what to display 1</MudText>
                         }
+                    }
+                    else if (_selectionMode == SelectionMode.SelectedFromTreeFolder && _requirementState != RequirementState.New)
+                    {
+                        <MudText Typo="Typo.body1">You are on a folder, please select or create a requirement.</MudText>
                     }
                     else
                     {
@@ -129,7 +157,13 @@
                                                     @ref="mdChangelog" />
                                 </MudItem>
                                 <MudItem xs="12">
-                                    <MudButton  MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Save</MudButton>
+                                    <MudButton ButtonType="ButtonType.Submit" 
+                                                Variant="Variant.Filled" Color="Color.Primary" Style="float: right;">Save</MudButton>
+                                    
+                                    @if (!Helpers.AppSettings.DisplayBrowser)
+                                    {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="OnDeleteAsync" >Delete</MudButton>
+                                    }
                                 </MudItem>
                             </MudGrid>
                         </EditForm>
@@ -141,12 +175,18 @@
 </MudGrid>
 
 
-
 @code {
     enum SelectionMode {
         NoSelection,
-        SelectedFromTree,
+        SelectedFromTreeFolder,
+        SelectedFromTreeReq,
         SelectedFromSearch
+    }
+
+    enum RequirementState {
+        None,
+        New,
+        ReadOrUpdate
     }
 
     FileBrowser fileBrowser;    //Reference to the file browser
@@ -158,7 +198,15 @@
     string[] errors = { };
 
     bool requirementsAreLoading = false;
-    Dictionary<string, int> rootRequirementsFolderInfo = null;
+    bool treeIsLoading = false;
+    bool loadingInProgress 
+    {
+        get 
+        {
+            return requirementsAreLoading || treeIsLoading;
+        }
+    }
+    Dictionary<string, int> requirementsStatistics = null;
 
     bool loadingError = false;
 
@@ -175,18 +223,66 @@
     bool detailsExpanded = true;
     
     //Is the requirement selected from the tree or is it selected from the search?
-    SelectionMode _selectionMode = SelectionMode.NoSelection;  
+    SelectionMode _selectionMode = SelectionMode.NoSelection;
+    RequirementState _requirementState = RequirementState.None;
 
+    protected override void OnInitialized()
+    {
+        RR.OnStartLoadingRequirements += OnStartLoadingRequirements;
+        RR.OnEndLoadingRequirements += OnEndLoadingRequirements;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            RR.GetAllRequirements();    //Placed here to have the page rendering before data are retrieved
+        }
+    }
+
+    public void Dispose()
+    {
+        RR.OnStartLoadingRequirements -= OnStartLoadingRequirements;
+        RR.OnEndLoadingRequirements -= OnEndLoadingRequirements;
+    }
+
+    private void OnStartLoadingRequirements(object sender, EventArgs e)
+    {
+        requirementsAreLoading = true;
+        StateHasChanged();
+    }
+
+    private void OnEndLoadingRequirements(object sender, EventArgs e)
+    {
+        requirementsAreLoading = false;
+        
+        //Calculates some statistics to visually check if something odd happened
+        //during the loading
+        int cumulReqs = 0;
+        int cumulFolders = 0;
+        GetStatistics(RR.GetAllCachedRequirements().FirstOrDefault(), ref cumulReqs, ref cumulFolders);
+        requirementsStatistics = new();
+        requirementsStatistics.Add("TotalReqs", cumulReqs);
+        requirementsStatistics.Add("TotalFolders", cumulFolders);
+
+        StateHasChanged();
+    }
 
     private async Task OnTreeItemSelectedAsync(TreeItemData selectedValue)
     {
-        rootRequirementsFolderInfo = null;
+        requirementsStatistics = null;
         _selectedItem = selectedValue;
-        _selectionMode = SelectionMode.SelectedFromTree;
 
         if (!_selectedItem.IsFolder)
         {
+            _selectionMode = SelectionMode.SelectedFromTreeReq;
+            _requirementState = RequirementState.ReadOrUpdate;
             await LoadRequirementFromUrl(selectedValue.Url);
+        }
+        else
+        {
+            _selectionMode = SelectionMode.SelectedFromTreeFolder;
+            _requirementState = RequirementState.None;
         }
     }
 
@@ -204,12 +300,51 @@
         model.Guid = string.Empty;
         model.IsSafety = false;
         model.SRAIds = string.Empty;
-
         selectedComponents.Clear();
         selectedSU.Clear();     
         selectedRequirement = null;  
-        await mdDescription.SetValueAsync(string.Empty);
-        await mdChangelog.SetValueAsync(string.Empty);
+        if (mdDescription != null)
+        {
+            await mdDescription.SetValueAsync(string.Empty);
+        }
+        if (mdChangelog != null)
+        {
+            await mdChangelog.SetValueAsync(string.Empty);
+        }
+
+        _requirementState = RequirementState.New;
+    }
+
+    private async Task OnDeleteAsync()
+    {
+        DialogResult result = await DisplayDeletionDialogAsync();
+
+        if (!result.Canceled)
+        {
+            bool physicalDeletionOk = RR.DeleteRequirement(selectedRequirement.Url);
+            if (physicalDeletionOk)
+            {
+                Snackbar.Add("Requirement deleted.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Requirement deletion failed.", Severity.Error);
+            }
+        }
+    }
+
+    private async Task<DialogResult> DisplayDeletionDialogAsync()
+    {
+        var parameters = new DialogParameters<GenericConfirmationDialog>();
+        parameters.Add(x => x.ContentText, $"Do you really want to delete this requirement? It cannot be undone.");
+        parameters.Add(x => x.ButtonText, "Delete");
+        parameters.Add(x => x.Color, Color.Error);
+
+        var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+        var dialog = await DialogService.ShowAsync<GenericConfirmationDialog>("Delete", parameters, options);
+        
+        return await dialog.Result;
     }
 
     private async Task OnSelectComponentsAsync()
@@ -224,15 +359,14 @@
         }
     }
 
-    private void OnRequirementsLoading()
+    private void OnTreeLoading()
     {
-        requirementsAreLoading = true;
+        treeIsLoading = true;
     }
 
-    private void OnRequirementsLoaded(Dictionary<string, int> stats)
+    private void OnTreeLoaded()
     {
-        rootRequirementsFolderInfo = stats;
-        requirementsAreLoading = false;
+        treeIsLoading = false;
     }
 
     private void OnSearch(SearchInstructions searchCriteria)
@@ -244,6 +378,7 @@
     private async Task OnSearchResultSelectedAsync(Requirement requirement)
     {
         _selectionMode = SelectionMode.SelectedFromSearch;
+        _requirementState = RequirementState.ReadOrUpdate;
         await LoadRequirementFromUrl(requirement.Url);
     }
 
@@ -251,7 +386,6 @@
     {
         searchResultsExpanded = newState;
     }
-
     private void OnDetailsExpansionChanged(bool newState)
     {
         detailsExpanded = newState;
@@ -331,7 +465,10 @@
         }
         else
         {
-            fileBrowser.UpdateTreeWithNewRequirement(selectedRequirement, requirementFormerUrl);
+            if (fileBrowser != null)
+            {
+                fileBrowser.UpdateTreeWithNewRequirement(selectedRequirement, requirementFormerUrl);
+            }
             Snackbar.Add("Requirement saved.", Severity.Success);
         }
     }
@@ -374,5 +511,15 @@
         model.AssociatedProtocolsIds = req.AssociatedProtocolsIds;
         model.Description = req.Description;
         model.SRAIds = req.SRAIds;
+    }
+
+    private static void GetStatistics(Folder startPoint, ref int cumulReqs, ref int cumulFolders)
+    {
+        cumulReqs += startPoint.FolderItems.Count();
+        cumulFolders++;
+        foreach (Folder subfolder in startPoint.SubFolders)
+        {
+            GetStatistics(subfolder, ref cumulReqs, ref cumulFolders);
+        }
     }
 }

@@ -1,6 +1,9 @@
 ﻿@using BlazBeaver.Data;
 @using BlazBeaver.Interfaces;
 
+@implements IDisposable
+
+@inject ISnackbar Snackbar;
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
 
@@ -8,10 +11,7 @@
     @if (loading)
     {
         <MudItem xs="12">
-            <MudStack Justify="Justify.Center" Row="true">
-                <MudProgressCircular  Color="Color.Info" Indeterminate="true" />
-                <MudText>Loading requirements</MudText>
-            </MudStack>
+            <LoadingPanel />
         </MudItem>
     }
     else
@@ -44,51 +44,51 @@
     public EventCallback OnLoading { get; set; }
 
     [Parameter]
-    public EventCallback<Dictionary<string, int>> OnLoaded { get; set; }
+    public EventCallback OnLoaded { get; set; }
 
     private bool loading = true;
 
     private HashSet<TreeItemData> TreeItems { get; set; } = new HashSet<TreeItemData>();
     private TreeItemData _selectedItem;
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override void OnInitialized()
     {
-        //Allows to display the page quickly then to run the progress item
-        if (firstRender)
+        RR.OnStartLoadingRequirements += OnStartLoadingRequirements;
+        RR.OnEndLoadingRequirements += OnEndLoadingRequirements;
+    }
+
+    public void Dispose()
+    {
+        RR.OnStartLoadingRequirements -= OnStartLoadingRequirements;
+        RR.OnEndLoadingRequirements -= OnEndLoadingRequirements;
+    }
+
+    private void OnStartLoadingRequirements(object sender, EventArgs e)
+    {
+        loading = true;
+        OnLoading.InvokeAsync();
+    }
+
+    private void OnEndLoadingRequirements(object sender, EventArgs e)
+    {
+        try
         {
-            try
+            var rootItem = RR.GetAllCachedRequirements().FirstOrDefault();
+
+            if (rootItem != null)
             {
-                loading = true;
-                OnLoading.InvokeAsync();
-
-                IEnumerable<Folder> allReqs =  RR.GetAllRequirements();
-                
-                var rootItem = allReqs.FirstOrDefault();
-
-                if (rootItem != null)
-                {
-                    TreeItemData dt = CreateTreeItemData(rootItem.Guid, rootItem.Url, rootItem.FolderName, true);
-                    TreeItems.Add(dt);
-                    MapFoldersToTree(rootItem, dt);
-                }
-            }
-            finally
-            {
-                loading = false;            
-                StateHasChanged();
-
-                Dictionary<string,int> stats = new Dictionary<string, int>();
-                int cumulReqs = 0;
-                int cumulFolders = 0;
-                GetStatistics(TreeItems.ElementAt(0), ref cumulReqs, ref cumulFolders);
-                stats.Add("TotalReqs", cumulReqs);
-                stats.Add("TotalFolders", cumulFolders);
-
-                OnLoaded.InvokeAsync(stats);
+                TreeItemData dt = CreateTreeItemData(rootItem.Guid, rootItem.Url, rootItem.FolderName, true);
+                TreeItems.Add(dt);
+                MapFoldersToTree(rootItem, dt);
             }
         }
+        finally
+        {
+            loading = false;            
+            StateHasChanged();
 
-        base.OnAfterRender(firstRender);
+            OnLoaded.InvokeAsync();
+        }
     }
 
     public void UpdateTreeWithNewRequirement(Requirement requirement, string requirementFormerUrl)
@@ -198,12 +198,23 @@
 
             if (!result.Canceled)
             {
+                bool localDeletionOk = false;
                 bool physicalDeletionOk = DeleteFromRepository();
 
                 if (physicalDeletionOk)
                 {
-                    DeleteFromTree();
+                    localDeletionOk = DeleteFromTree();
                 }
+
+                if (physicalDeletionOk && localDeletionOk)
+                {
+                    Snackbar.Add("Requirement deleted.", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Requirement deletion failed.", Severity.Error);
+                }
+
             }
         }
     }
@@ -308,15 +319,22 @@
         }
     }
 
-    private void DeleteFromTree()
+    private bool DeleteFromTree()
     {
-        TreeItemData parent = FindParent(_selectedItem, TreeItems.ElementAt(0));    
-
-        if (parent != null)
+        try
         {
-            parent.TreeItems.Remove(_selectedItem);
-            //selectedItem = null;
-            StateHasChanged();
+            TreeItemData parent = FindParent(_selectedItem, TreeItems.ElementAt(0));    
+
+            if (parent != null)
+            {
+                parent.TreeItems.Remove(_selectedItem);
+                StateHasChanged();
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
         }        
     }
 
@@ -384,15 +402,5 @@
     private static string GetDisplayText(Requirement req)
     {
         return string.Concat(req.Id, " ", req.Title);
-    }
-
-    private static void GetStatistics(TreeItemData startPoint, ref int cumulReqs, ref int cumulFolders)
-    {
-        cumulReqs += !startPoint.IsFolder ? 1 : 0;
-        cumulFolders += startPoint.IsFolder ? 1 : 0;
-        foreach (TreeItemData subItems in startPoint.TreeItems)
-        {
-            GetStatistics(subItems, ref cumulReqs, ref cumulFolders);
-        }
     }
 }

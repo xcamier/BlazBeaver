@@ -46,6 +46,11 @@
     }
     <MudItem xs="12">
         <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnSearch">Search</MudButton>
+        @if (!Helpers.AppSettings.DisplayBrowser)
+        {
+            <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" Style="float: right;"
+                        OnClick="NewRequirementClicked">New Requirement</MudButton>
+        }
     </MudItem>
 </MudGrid>
 
@@ -53,6 +58,9 @@
 @code {
     [Parameter]
     public EventCallback<SearchInstructions> RunSearch { get; set; }
+
+    [Parameter]
+    public EventCallback OnNewRequirement { get; set; }
 
     string andOrGrouping = "AND";   
     List<SearchCriterion> searchCriteria = new List<SearchCriterion>() { new SearchCriterion() };
@@ -108,5 +116,10 @@
         }
 
         return collection.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));  
+    }
+
+    private void NewRequirementClicked()
+    {
+        OnNewRequirement.InvokeAsync();
     }
 }

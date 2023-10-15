@@ -1,9 +1,13 @@
 using BlazBeaver.Data;
+using Microsoft.AspNetCore.Components;
 
 namespace BlazBeaver.Interfaces
 {
     public interface IRequirementsRepository
     {
+        event EventHandler OnStartLoadingRequirements;
+        event EventHandler OnEndLoadingRequirements;
+
         IEnumerable<Folder> GetAllRequirements();
         Requirement GetRequirement(string reqId);
         IEnumerable<Folder> GetAllCachedRequirements();
