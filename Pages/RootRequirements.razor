@@ -42,100 +42,100 @@
                 <MudExpansionPanel Text="Search Results" IsExpanded="@searchResultsExpanded" IsExpandedChanged="OnSearchResultsExpansionChanged">
                     <SearchResults FoundRequirements="@foundRequirements" OnSearchResultSelected="OnSearchResultSelectedAsync" />
                 </MudExpansionPanel>
-            </MudExpansionPanels>
+                <MudExpansionPanel Text="Details" IsExpanded="@detailsExpanded" IsExpandedChanged="OnDetailsExpansionChanged">
 
-            <MudPaper style="padding-left: 1em; padding-right: 1em">
-                @if (_selectionMode == SelectionMode.NoSelection || (_selectionMode == SelectionMode.SelectedFromTree && (_selectedItem == null || _selectedItem.IsFolder)))
-                {
-                    @if (requirementsAreLoading)
+                    @if (_selectionMode == SelectionMode.NoSelection || (_selectionMode == SelectionMode.SelectedFromTree && (_selectedItem == null || _selectedItem.IsFolder)))
                     {
-                        <MudText Typo="Typo.body1">Please wait...</MudText>
-                    }
-                    else
-                    {   
-                        @if (rootRequirementsFolderInfo == null)
+                        @if (requirementsAreLoading)
                         {
-                            <MudText Typo="Typo.body1">You are on a folder, please select a requirement.</MudText>
+                            <MudText Typo="Typo.body1">Please wait...</MudText>
                         }
                         else
-                        {
-                            <MudText Typo="Typo.body1"><b>Requirements statistics:</b></MudText>
-                            <MudText Typo="Typo.body1">@rootRequirementsFolderInfo["TotalReqs"] requirements found</MudText>
-                            <MudText Typo="Typo.body1">Those requirements are contained in @rootRequirementsFolderInfo["TotalFolders"] folders or subfolders.</MudText>
+                        {   
+                            @if (rootRequirementsFolderInfo == null)
+                            {
+                                <MudText Typo="Typo.body1">You are on a folder, please select a requirement.</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body1"><b>Requirements statistics:</b></MudText>
+                                <MudText Typo="Typo.body1">@rootRequirementsFolderInfo["TotalReqs"] requirements found</MudText>
+                                <MudText Typo="Typo.body1">Those requirements are contained in @rootRequirementsFolderInfo["TotalFolders"] folders or subfolders.</MudText>
+                            }
                         }
                     }
-                }
-                else
-                {
-                    <EditForm Model="@model" OnValidSubmit="OnValidSubmit">
-                        <MudGrid>
-                            <MudItem xs="12">
-                                <MudTextField Label="Title" Required="true" RequiredError="Requirement title is required!" 
-                                                Style="font-weight: bold;"
-                                                @bind-Value="model.Title" For="@(() => model.Title)"/>
-                            </MudItem>
-                            <MudItem xs="4">
-                                <MudCheckBox @bind-Checked="model.IsSafety" For="@(() => model.IsSafety)">Safety Risk</MudCheckBox>
-                            </MudItem>
-                            <MudItem xs="8">
-                                <MudSelect Placeholder="Type of Requirement" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
-                                    @foreach (string typeOfRequirement in Helpers.ReqAndProcProperties.TypesOfRequirement)
-                                    {
-                                        <MudSelectItem Value=@typeOfRequirement />
-                                    }
-                                </MudSelect>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudText>Requirement Description</MudText>
-                                <MarkdownEditor @bind-Value="@model.Description"
-                                                @ref="mdDescription" />
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudTextField Label="SRA Ids" Required="false"
-                                                @bind-Value="model.SRAIds" For="@(() => model.SRAIds)"/>
-                            </MudItem>
-                            <MudItem xs="6">
-                                <MudTextField Label="Created in version" Required="false"
-                                                @bind-Value="model.CreatedInVersion" For="@(() => model.CreatedInVersion)"/>
-                            </MudItem>
-                            <MudItem xs="6">
-                                <MudTextField Label="Deprecated in version" Required="false"
-                                                @bind-Value="model.DeprecatedInVersion" For="@(() => model.DeprecatedInVersion)"/>
-                            </MudItem>
-                            <MudItem xs="6">
-                                <MudChipSet AllClosable="true" OnClose="UnselectComponent">
-                                    @foreach (var value in selectedComponents)
-                                    {
-                                        <MudChip Text="@value"></MudChip>
-                                    }
-                                </MudChipSet>
-                                Components <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnSelectComponentsAsync"></MudIconButton>
-                            </MudItem>
-                            <MudItem xs="6">
-                                <MudChipSet AllClosable="true" OnClose="UnselectSU">
-                                    @foreach (var value in selectedSU)
-                                    {
-                                        <MudChip Text="@value"></MudChip>
-                                    }
-                                </MudChipSet>
-                                Software Units <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnSelectSUsAsync"></MudIconButton>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudTextField Label="Protocols Ids" Required="false"
-                                                @bind-Value="model.AssociatedProtocolsIds" For="@(() => model.AssociatedProtocolsIds)"/>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudText>Requirement Changelog</MudText>
-                                <MarkdownEditor @bind-Value="@model.Changelog"
-                                                @ref="mdChangelog" />
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudButton  MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Save</MudButton>
-                            </MudItem>
-                        </MudGrid>
-                    </EditForm>
-                }
-            </MudPaper>
+                    else
+                    {
+                        <EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+                            <MudGrid>
+                                <MudItem xs="12">
+                                    <MudTextField Label="Title" Required="true" RequiredError="Requirement title is required!" 
+                                                    Style="font-weight: bold;"
+                                                    @bind-Value="model.Title" For="@(() => model.Title)"/>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <MudCheckBox @bind-Checked="model.IsSafety" For="@(() => model.IsSafety)">Safety Risk</MudCheckBox>
+                                </MudItem>
+                                <MudItem xs="8">
+                                    <MudSelect Placeholder="Type of Requirement" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
+                                        @foreach (string typeOfRequirement in Helpers.ReqAndProcProperties.TypesOfRequirement)
+                                        {
+                                            <MudSelectItem Value=@typeOfRequirement />
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudText>Requirement Description</MudText>
+                                    <MarkdownEditor @bind-Value="@model.Description"
+                                                    @ref="mdDescription" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField Label="SRA Ids" Required="false"
+                                                    @bind-Value="model.SRAIds" For="@(() => model.SRAIds)"/>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudTextField Label="Created in version" Required="false"
+                                                    @bind-Value="model.CreatedInVersion" For="@(() => model.CreatedInVersion)"/>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudTextField Label="Deprecated in version" Required="false"
+                                                    @bind-Value="model.DeprecatedInVersion" For="@(() => model.DeprecatedInVersion)"/>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudChipSet AllClosable="true" OnClose="UnselectComponent">
+                                        @foreach (var value in selectedComponents)
+                                        {
+                                            <MudChip Text="@value"></MudChip>
+                                        }
+                                    </MudChipSet>
+                                    Components <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnSelectComponentsAsync"></MudIconButton>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudChipSet AllClosable="true" OnClose="UnselectSU">
+                                        @foreach (var value in selectedSU)
+                                        {
+                                            <MudChip Text="@value"></MudChip>
+                                        }
+                                    </MudChipSet>
+                                    Software Units <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnSelectSUsAsync"></MudIconButton>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField Label="Protocols Ids" Required="false"
+                                                    @bind-Value="model.AssociatedProtocolsIds" For="@(() => model.AssociatedProtocolsIds)"/>
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudText>Requirement Changelog</MudText>
+                                    <MarkdownEditor @bind-Value="@model.Changelog"
+                                                    @ref="mdChangelog" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudButton  MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Save</MudButton>
+                                </MudItem>
+                            </MudGrid>
+                        </EditForm>
+                    }
+                </MudExpansionPanel>
+            </MudExpansionPanels>
         </MudStack>
     </MudItem>
 </MudGrid>
@@ -169,9 +169,14 @@
     List<string> selectedSU = new List<string>();
 
     IEnumerable<Requirement> foundRequirements = new List<Requirement>();
-    bool searchResultsExpanded = false;
     
+    //state of the expansion pannels
+    bool searchResultsExpanded = false;
+    bool detailsExpanded = true;
+    
+    //Is the requirement selected from the tree or is it selected from the search?
     SelectionMode _selectionMode = SelectionMode.NoSelection;  
+
 
     private async Task OnTreeItemSelectedAsync(TreeItemData selectedValue)
     {
@@ -245,6 +250,11 @@
     private void OnSearchResultsExpansionChanged(bool newState)
     {
         searchResultsExpanded = newState;
+    }
+
+    private void OnDetailsExpansionChanged(bool newState)
+    {
+        detailsExpanded = newState;
     }
 
     private void UnselectComponent(MudChip chip) => selectedComponents.Remove(chip.Text);
