@@ -14,5 +14,11 @@ It is still at a very early stage.
 **DisplayBrowser**
 True or False depending on if you want to display all the settings
 
+**APIUrl**
+Url to an API that can provide an Id automatically
+
+**UseApiForUniqueId**
+Either use the internal system or the API to generate Ids
+
 **Others**
-Update the FilesSettings class to set your default paths and  file names
+Update the FilesSettings class to set your default paths and file names

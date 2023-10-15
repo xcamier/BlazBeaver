@@ -3,6 +3,7 @@ using MudBlazor.Services;
 using MudBlazor;
 using BlazBeaver.Interfaces;
 using BlazBeaver.DataAccess;
+using BlazBeaver.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +34,8 @@ builder.Services.AddSingleton<DataSourceConverter<Requirement>>();
 builder.Services.AddSingleton<IRequirementsRepository, RequirementsRepository>();
 builder.Services.AddSingleton<IBasicsSettingsRepository, BasicSettingsRepository>();
 builder.Services.AddSingleton<ISearchRequirements, SearchRequirements>();
+builder.Services.AddSingleton<IApiClient, ApiClient>();
+builder.Services.AddSingleton<IIdProvider, IdProvider>();
 
 var app = builder.Build();
 

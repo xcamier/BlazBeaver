@@ -13,6 +13,7 @@
 @inject IDialogService DialogService;
 @inject IBasicsSettingsRepository BS;
 @inject ISearchRequirements SR;
+@inject IIdProvider IdProvider;
 
 <PageTitle>Requirements</PageTitle>
 
@@ -288,10 +289,12 @@
 
     private async Task OnNewRequirementAsync()
     {
+        //NewIdResult newId = await ApiClient.GetNewIdAsync();
+
         model.Components.Clear();
         model.Changelog = string.Empty;
         model.Description = string.Empty;
-        model.Title = Helpers.RequirementsHelper.GetNewId(RR.GetAllCachedRequirements());
+        model.Title = await IdProvider.GetNewIdAsync(RR.GetAllCachedRequirements()); //Helpers.RequirementsHelper.GetNewId(RR.GetAllCachedRequirements());
         model.CreatedInVersion = string.Empty;
         model.DeprecatedInVersion = string.Empty;
         model.SoftwareUnits.Clear();

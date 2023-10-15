@@ -29,21 +29,26 @@ public class RequirementsHelper
         //We want the next bigger id
         maxId++;
 
-        return $"{ReqAndProcProperties.RequirementIdentifier}{maxId}";
+        return FormatRequirement(maxId);
     }
 
-   public static void FlattenRequirements(IEnumerable<Folder> folders, List<Requirement> allReqs)
-   {
-      foreach (Folder folder in folders)
-      {
-         foreach(IReqProt toto in folder.FolderItems)
-         {
-            allReqs.Add(toto as Requirement);
-         }
+    public static string FormatRequirement(int uniqueId)
+    {
+        return $"{ReqAndProcProperties.RequirementIdentifier}{uniqueId}";
+    }
 
-         FlattenRequirements(folder.SubFolders, allReqs);
-      }
-   }
+    public static void FlattenRequirements(IEnumerable<Folder> folders, List<Requirement> allReqs)
+    {
+        foreach (Folder folder in folders)
+        {
+            foreach(IReqProt toto in folder.FolderItems)
+            {
+                allReqs.Add(toto as Requirement);
+            }
+
+            FlattenRequirements(folder.SubFolders, allReqs);
+        }
+    }
 
     public static string GetId(string idAndTitle)
     {

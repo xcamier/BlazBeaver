@@ -3,6 +3,8 @@ namespace BlazBeaver.Helpers;
 public static class AppSettings
 {
     public const bool DisplayBrowser = false;
+    public const string APIUrl = "http://localhost:5028/api/v1/Ids/next/";
+    public const bool UseApiForUniqueId = false;
 }
 
 public static class FilesSettings
