@@ -20,11 +20,7 @@
             </MudSelect>
         </MudItem>
         <MudItem xs="7">
-            @if (searchCriterion.TypeOfCriterion == "Protocols" || searchCriterion.TypeOfCriterion == "Number")
-            {
-                <MudTextField @bind-Value="@searchCriterion.Criterion" />
-            }
-            else if (searchCriterion.TypeOfCriterion == "Software Units")
+            @if (searchCriterion.TypeOfCriterion == "Software Units")
             {
                 <MudAutocomplete T="string"  @bind-Value="searchCriterion.Criterion" SearchFunc="@SearchOnSU"
                             ResetValueOnEmptyText="true"
@@ -35,6 +31,10 @@
                 <MudAutocomplete T="string"  @bind-Value="searchCriterion.Criterion" SearchFunc="@SearchOnComponent"
                             ResetValueOnEmptyText="true"
                             CoerceText="false" CoerceValue="false" />  
+            }
+            else
+            {
+                <MudTextField @bind-Value="@searchCriterion.Criterion" />
             }
         </MudItem>
         <MudItem xs="2">
