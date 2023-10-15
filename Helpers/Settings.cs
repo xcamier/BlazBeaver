@@ -27,4 +27,16 @@ public static class ReqAndProcProperties
         "Number",
         "Title"
     };
+
+    public static readonly IEnumerable<string> TypesOfRequirement = new List<string>()
+    {
+        "Display",
+        "Functional",
+        "Performance",
+        "Printing",
+        "Report",
+        "Technical",
+        "Testing",
+        "Validate"
+    };
 }

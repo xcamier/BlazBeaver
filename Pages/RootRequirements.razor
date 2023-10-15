@@ -78,14 +78,10 @@
                             </MudItem>
                             <MudItem xs="8">
                                 <MudSelect Placeholder="Type of Requirement" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
-                                    <MudSelectItem Value="@("Display")" />
-                                    <MudSelectItem Value="@("Functional")" />
-                                    <MudSelectItem Value="@("Performance")" />
-                                    <MudSelectItem Value="@("Printing")" />
-                                    <MudSelectItem Value="@("Report")" />
-                                    <MudSelectItem Value="@("Technical")" />
-                                    <MudSelectItem Value="@("Testing")" />
-                                    <MudSelectItem Value="@("Validate")" />
+                                    @foreach (string typeOfRequirement in Helpers.ReqAndProcProperties.TypesOfRequirement)
+                                    {
+                                        <MudSelectItem Value=@typeOfRequirement />
+                                    }
                                 </MudSelect>
                             </MudItem>
                             <MudItem xs="12">
