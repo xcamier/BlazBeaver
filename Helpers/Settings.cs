@@ -18,6 +18,7 @@ public static class FilesSettings
 
 public static class ReqAndProcProperties
 {
+    public const string RequirementIdentifier = "RREQ-";
     public const string RootFolderName = "root";
     public static readonly IEnumerable<string> PropertiesToNotSerialize = new List<string>()
     {

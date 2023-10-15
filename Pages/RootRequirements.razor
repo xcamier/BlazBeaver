@@ -291,7 +291,7 @@
         model.Components.Clear();
         model.Changelog = string.Empty;
         model.Description = string.Empty;
-        model.Title = string.Empty;
+        model.Title = Helpers.RequirementsHelper.GetNewId(RR.GetAllCachedRequirements());
         model.CreatedInVersion = string.Empty;
         model.DeprecatedInVersion = string.Empty;
         model.SoftwareUnits.Clear();
@@ -429,8 +429,8 @@
         }
 
         selectedRequirement.Guid = string.IsNullOrEmpty(formContext.Guid) ? Guid.NewGuid().ToString() : formContext.Guid; 
-        selectedRequirement.Id = Helpers.TitleAndIdTransformation.GetId(formContext.Title);
-        selectedRequirement.Title = Helpers.TitleAndIdTransformation.GetTitle(formContext.Title);
+        selectedRequirement.Id = Helpers.RequirementsHelper.GetId(formContext.Title);
+        selectedRequirement.Title = Helpers.RequirementsHelper.GetTitle(formContext.Title);
         selectedRequirement.TypeOfRequirement = formContext.TypeOfRequirement;
         selectedRequirement.Components = selectedComponents;
         selectedRequirement.SoftwareUnits = selectedSU;

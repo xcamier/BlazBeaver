@@ -9,7 +9,7 @@ It is still at a very early stage.
 - Create manually the wwwroot folder
 
 # Settings
-Helpers / Settings
+## Helpers / Settings
 
 **DisplayBrowser**
 True or False depending on if you want to display all the settings
