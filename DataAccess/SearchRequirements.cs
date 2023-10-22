@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using BlazBeaver.Data;
 using BlazBeaver.Interfaces;
 
@@ -66,29 +67,58 @@ public class SearchRequirements: ISearchRequirements
       }
    }
 
-    private static IEnumerable<Requirement> SelectSubsetOfRequirements(IEnumerable<Requirement> filteredResults, SearchCriterion criterion)
-    {
-        if (criterion.TypeOfCriterion == "Components")
-        {
-            filteredResults = filteredResults.Where(r => r.Components.Contains(criterion.Criterion));
-        }
-        else if (criterion.TypeOfCriterion == "Software Units")
-        {
-            filteredResults = filteredResults.Where(r => r.SoftwareUnits.Contains(criterion.Criterion));
-        }
-        else if (criterion.TypeOfCriterion == "Protocols")
-        {
-            filteredResults = filteredResults.Where(r => r.AssociatedProtocolsIds.Contains(criterion.Criterion));
-        }
-        else if (criterion.TypeOfCriterion == "Number")
-        {
-            filteredResults = filteredResults.Where(r => string.Compare(criterion.Criterion, r.Id, StringComparison.InvariantCultureIgnoreCase) == 0);
-        }
-        else if (criterion.TypeOfCriterion == "Title")
-        {
-            filteredResults = filteredResults.Where(r => r.Title.Contains(criterion.Criterion, StringComparison.InvariantCultureIgnoreCase));
-        }
+   private static IEnumerable<Requirement> SelectSubsetOfRequirements(IEnumerable<Requirement> filteredResults, SearchCriterion criterion)
+   {
+      if (criterion.TypeOfCriterion == "Components")
+      {
+         filteredResults = filteredResults.Where(r => r.Components.Contains(criterion.Criterion));
+      }
+      else if (criterion.TypeOfCriterion == "Software Units")
+      {
+         filteredResults = filteredResults.Where(r => r.SoftwareUnits.Contains(criterion.Criterion));
+      }
+      else if (criterion.TypeOfCriterion == "Protocols")
+      {
+         filteredResults = filteredResults.Where(r => r.AssociatedProtocolsIds.Contains(criterion.Criterion));
+      }
+      else if (criterion.TypeOfCriterion == "Number")
+      {
+         filteredResults = filteredResults.Where(r => string.Compare(criterion.Criterion, r.Id, StringComparison.InvariantCultureIgnoreCase) == 0);
+      }
+      else if (criterion.TypeOfCriterion == "Title")
+      {
+         filteredResults = filteredResults.Where(r => r.Title.Contains(criterion.Criterion, StringComparison.InvariantCultureIgnoreCase));
+      }
+      else if (criterion.TypeOfCriterion == "Text")
+      {
+         ComponentOrSUComparer comparer = new();
 
-        return filteredResults;
-    }
+         filteredResults = filteredResults.Where(r =>
+                        r.Title.Contains(criterion.Criterion, StringComparison.InvariantCultureIgnoreCase) ||
+                        r.Description.Contains(criterion.Criterion, StringComparison.InvariantCultureIgnoreCase) ||
+                        r.Changelog.Contains(criterion.Criterion, StringComparison.InvariantCultureIgnoreCase) ||
+                        r.Components.Contains(criterion.Criterion, comparer) ||
+                        r.SoftwareUnits.Contains(criterion.Criterion, comparer));
+      }
+
+      return filteredResults;
+   }
+}
+
+public class ComponentOrSUComparer : IEqualityComparer<string>
+{
+   public bool Equals(string x, string y)
+   {
+      if (x.Contains(y, StringComparison.InvariantCultureIgnoreCase))
+      {
+         return true;
+      }
+
+      return false;
+   }
+
+   public int GetHashCode([DisallowNull] string obj)
+   {
+      return obj.GetHashCode();
+   }
 }

@@ -33,7 +33,8 @@ public static class ReqAndProcProperties
         "Software Units",
         "Protocols",
         "Number",
-        "Title"
+        "Title",
+        "Text"
     };
 
     public static readonly IEnumerable<string> TypesOfRequirement = new List<string>()
