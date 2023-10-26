@@ -1,6 +1,8 @@
 ﻿@using Data;
 @using Interfaces;
 
+
+@inject IOptions<AppSettingsOptions> Configuration;
 @inject IBasicsSettingsRepository BS;
 
 <MudRadioGroup @bind-SelectedOption="@andOrGrouping">
@@ -46,7 +48,7 @@
     }
     <MudItem xs="12">
         <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" OnClick="OnSearch">Search</MudButton>
-        @if (!Helpers.AppSettings.DisplayBrowser)
+        @if (!Configuration.Value.DisplayBrowser)
         {
             <MudButton Variant="Variant.Filled" Size="Size.Small"  Color="Color.Primary" Style="float: right;"
                         OnClick="NewRequirementClicked">New Requirement</MudButton>
@@ -69,8 +71,8 @@
 
     protected override void OnInitialized()
     {
-        allSU = BS.GetAll(Helpers.FilesSettings.SoftwareUnitsSetting);
-        allComponents = BS.GetAll(Helpers.FilesSettings.ComponentsSetting);
+        allSU = BS.GetAll(Configuration.Value.SoftwareUnitsSetting);
+        allComponents = BS.GetAll(Configuration.Value.ComponentsSetting);
     }
 
         private void OnAddCriterion()

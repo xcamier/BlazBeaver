@@ -1,10 +1,19 @@
 using System.Text;
+using Microsoft.Extensions.Options;
 using BlazBeaver.Interfaces;
+using BlazBeaver.Data;
 
 namespace BlazBeaver.DataAccess;
 
 public class DataIO : IDataIO
 {
+    private readonly IOptions<AppSettingsOptions> _configuration;
+
+    public DataIO(IOptions<AppSettingsOptions> configuration)
+    {
+        _configuration = configuration;
+    }
+
     public IEnumerable<string> LoadAll(string url, string fileExtension)
     {
         List<string> allFoldersAndFiles = new List<string>();
@@ -69,7 +78,7 @@ public class DataIO : IDataIO
             string path = parentUrl;
             if (string.IsNullOrEmpty(path))
             {
-                path = Helpers.FilesSettings.RequirementsFolderLocation;
+                path = _configuration.Value.RequirementsFolderLocation;
             }
  
             path = Path.Combine(path, newFolderName);

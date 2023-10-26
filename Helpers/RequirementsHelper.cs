@@ -10,7 +10,7 @@ public class RequirementsHelper
     //Heper method to suggest an id when creating a new item. As it is not 
     //centralized, the solution is not wonderful and should be replaced by a 
     //dedicated service
-    public static string GetNewId(IEnumerable<Folder> requirementsInFolders)
+    public static string GetNewId(IEnumerable<Folder> requirementsInFolders, string requirementIdentifier)
     {
         List<Requirement> allReqs = new();
         FlattenRequirements(requirementsInFolders, allReqs);
@@ -18,7 +18,7 @@ public class RequirementsHelper
         int maxId = -1;
         foreach (Requirement req in allReqs)
         {
-            string idAsStr =  req.Id.Substring(ReqAndProcProperties.RequirementIdentifier.Length);
+            string idAsStr =  req.Id.Substring(requirementIdentifier.Length);
             int id;
             bool success = int.TryParse(idAsStr, out id);
             if (success)
@@ -29,12 +29,12 @@ public class RequirementsHelper
         //We want the next bigger id
         maxId++;
 
-        return FormatRequirement(maxId);
+        return FormatRequirement(maxId, requirementIdentifier);
     }
 
-    public static string FormatRequirement(int uniqueId)
+    public static string FormatRequirement(int uniqueId, string requirementIdentifier)
     {
-        return $"{ReqAndProcProperties.RequirementIdentifier}{uniqueId}";
+        return $"{requirementIdentifier}{uniqueId}";
     }
 
     public static void FlattenRequirements(IEnumerable<Folder> folders, List<Requirement> allReqs)
@@ -58,16 +58,16 @@ public class RequirementsHelper
         return idOnly;
     }
 
-    public static string GetTitle(string idAndTitle)
+    public static string GetTitle(string idAndTitle, string fileExtension)
     {
         string[] idAndTitleSplit = idAndTitle.Split(' ');
         string[] titleSplit = new string[idAndTitleSplit.Length - 1];
         Array.Copy(idAndTitleSplit, 1, titleSplit, 0, idAndTitleSplit.Length - 1);
         string titleOnly = string.Join(" ", titleSplit);
         
-        if (titleOnly.EndsWith(FilesSettings.FileExtension))
+        if (titleOnly.EndsWith(fileExtension))
         {
-            titleOnly = titleOnly.Substring(0, titleOnly.Length - FilesSettings.FileExtension.Length);  //removes the .md
+            titleOnly = titleOnly.Substring(0, titleOnly.Length - fileExtension.Length);  //removes the .md
         }
 
         return titleOnly;
