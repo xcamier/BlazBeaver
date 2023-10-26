@@ -51,7 +51,7 @@ public class DataSourceConverter<T> where T: IReqProt, new()
         IEnumerable<string> allPropertiesNames = GetPOCOProperties();
 
         foreach (string propertyName in allPropertiesNames.
-                                            Where(pn => !Helpers.ReqAndProcProperties.PropertiesToNotSerialize.Contains(pn))) 
+                                            Where(pn => !Helpers.FilesSettings.PropertiesToNotSerialize.Contains(pn))) 
         {
             //Creation of the section
             string sectionName = Helpers.FilesSettings.SectionTpl.Replace("replace_me", propertyName);

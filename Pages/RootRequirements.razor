@@ -108,7 +108,7 @@
                                 </MudItem>
                                 <MudItem xs="8">
                                     <MudSelect Placeholder="Type of Requirement" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
-                                        @foreach (string typeOfRequirement in Helpers.ReqAndProcProperties.TypesOfRequirement)
+                                        @foreach (string typeOfRequirement in Helpers.GlobalCollections.TypesOfRequirement)
                                         {
                                             <MudSelectItem Value=@typeOfRequirement />
                                         }

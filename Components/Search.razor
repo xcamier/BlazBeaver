@@ -15,7 +15,7 @@
     {
         <MudItem xs="3">
             <MudSelect Placeholder="Type of Property" @bind-Value="@searchCriterion.TypeOfCriterion">
-                @foreach (string typeOfProperty in Helpers.ReqAndProcProperties.SearchTypes)
+                @foreach (string typeOfProperty in Helpers.GlobalCollections.SearchTypes)
                 {
                     <MudSelectItem Value=@typeOfProperty />
                 }
