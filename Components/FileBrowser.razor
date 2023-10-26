@@ -3,6 +3,7 @@
 
 @implements IDisposable
 
+@inject IOptions<AppSettingsOptions> Configuration;
 @inject ISnackbar Snackbar;
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
@@ -172,7 +173,7 @@
 
     private async Task OnRenameFolderAsync()
     {
-        if (IsValidFolderSelection(_selectedItem)) 
+        if (IsValidFolderSelection(_selectedItem, Configuration.Value.RootFolderName)) 
         {
             DialogResult result = await DisplayRenamingDialogAsync();
 
@@ -192,7 +193,7 @@
 
     private async Task OnDeleteAsync()
     {
-        if (IsValidFolderSelection(_selectedItem)) 
+        if (IsValidFolderSelection(_selectedItem, Configuration.Value.RootFolderName)) 
         {
             DialogResult result = await DisplayDeletionDialogAsync();
 
@@ -394,9 +395,9 @@
         return null;
     }
 
-    private static bool IsValidFolderSelection(TreeItemData selectedItem)
+    private static bool IsValidFolderSelection(TreeItemData selectedItem, string rootFolderName)
     {
-        return selectedItem != null && selectedItem.Url != Helpers.ReqAndProcProperties.RootFolderName;
+        return selectedItem != null && selectedItem.Url != rootFolderName;
     }
 
     private static string GetDisplayText(Requirement req)

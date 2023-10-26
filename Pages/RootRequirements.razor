@@ -8,6 +8,7 @@
 
 @implements IDisposable
 
+@inject IOptions<AppSettingsOptions> Configuration;
 @inject ISnackbar Snackbar
 @inject IRequirementsRepository RR;
 @inject IDialogService DialogService;
@@ -29,7 +30,7 @@
         <MudText Typo="Typo.h5">Requirements</MudText>
     </MudItem>
 
-    @if (Helpers.AppSettings.DisplayBrowser)
+    @if (Configuration.Value.DisplayBrowser)
     {
         <MudItem xs="4">
             <MudPaper>
@@ -53,7 +54,7 @@
             <MudExpansionPanels MultiExpansion="true">
                 
                 <!-- Displays the loading progress only if not already displayed in the browser -->
-                @if(loadingInProgress && !Helpers.AppSettings.DisplayBrowser)
+                @if(loadingInProgress && !Configuration.Value.DisplayBrowser)
                 {
                     <MudExpansionPanel Text="Loading..." IsExpanded="true">
                         <LoadingPanel />
@@ -107,7 +108,7 @@
                                 </MudItem>
                                 <MudItem xs="8">
                                     <MudSelect Placeholder="Type of Requirement" @bind-Value="model.TypeOfRequirement" For="@(() => model.TypeOfRequirement)">
-                                        @foreach (string typeOfRequirement in Helpers.ReqAndProcProperties.TypesOfRequirement)
+                                        @foreach (string typeOfRequirement in Helpers.GlobalCollections.TypesOfRequirement)
                                         {
                                             <MudSelectItem Value=@typeOfRequirement />
                                         }
@@ -161,7 +162,7 @@
                                     <MudButton ButtonType="ButtonType.Submit" 
                                                 Variant="Variant.Filled" Color="Color.Primary" Style="float: right;">Save</MudButton>
                                     
-                                    @if (!Helpers.AppSettings.DisplayBrowser)
+                                    @if (!Configuration.Value.DisplayBrowser)
                                     {
                                         <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="OnDeleteAsync" >Delete</MudButton>
                                     }
@@ -352,7 +353,7 @@
 
     private async Task OnSelectComponentsAsync()
     {
-        IEnumerable<string> allComponents = BS.GetAll(Helpers.FilesSettings.ComponentsSetting);
+        IEnumerable<string> allComponents = BS.GetAll(Configuration.Value.ComponentsSetting);
         DialogResult result = await DisplayComponentsSelectorDialogAsync(allComponents);
 
         if (!result.Canceled)
@@ -398,7 +399,7 @@
 
     private async Task OnSelectSUsAsync()
     {
-        IEnumerable<string> allSU = BS.GetAll(Helpers.FilesSettings.SoftwareUnitsSetting);
+        IEnumerable<string> allSU = BS.GetAll(Configuration.Value.SoftwareUnitsSetting);
         DialogResult result = await DisplayComponentsSelectorDialogAsync(allSU);
 
         if (!result.Canceled)
@@ -433,7 +434,7 @@
 
         selectedRequirement.Guid = string.IsNullOrEmpty(formContext.Guid) ? Guid.NewGuid().ToString() : formContext.Guid; 
         selectedRequirement.Id = Helpers.RequirementsHelper.GetId(formContext.Title);
-        selectedRequirement.Title = Helpers.RequirementsHelper.GetTitle(formContext.Title);
+        selectedRequirement.Title = Helpers.RequirementsHelper.GetTitle(formContext.Title, Configuration.Value.FileExtension);
         selectedRequirement.TypeOfRequirement = formContext.TypeOfRequirement;
         selectedRequirement.Components = selectedComponents;
         selectedRequirement.SoftwareUnits = selectedSU;
@@ -452,7 +453,7 @@
         }
         else if (_selectedItem == null)
         {
-            folderUrl = Helpers.FilesSettings.RequirementsFolderLocation;
+            folderUrl = Configuration.Value.RequirementsFolderLocation;
         }
         else
         {

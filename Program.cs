@@ -37,6 +37,10 @@ builder.Services.AddSingleton<ISearchRequirements, SearchRequirements>();
 builder.Services.AddSingleton<IApiClient, ApiClient>();
 builder.Services.AddSingleton<IIdProvider, IdProvider>();
 
+//Global settings
+builder.Services.Configure<AppSettingsOptions>(
+        builder.Configuration.GetSection(AppSettingsOptions.AppSettings));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

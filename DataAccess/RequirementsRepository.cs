@@ -1,6 +1,7 @@
 using BlazBeaver.Data;
 using BlazBeaver.Helpers;
 using BlazBeaver.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace BlazBeaver.DataAccess;
 
@@ -13,11 +14,13 @@ public class RequirementsRepository : IRequirementsRepository
 
     private readonly IDataIO _dataIO;
     private readonly DataSourceConverter<Requirement> _converter; 
+    private readonly IOptions<AppSettingsOptions> _configuration;
 
-    public RequirementsRepository(IDataIO dataIO, DataSourceConverter<Requirement> converter)
+    public RequirementsRepository(IDataIO dataIO, DataSourceConverter<Requirement> converter, IOptions<AppSettingsOptions> configuration)
     {
         _dataIO = dataIO;
         _converter = converter;
+        _configuration = configuration;
     }
 
 #region Requirements management
@@ -27,7 +30,7 @@ public class RequirementsRepository : IRequirementsRepository
         {
             RaiseEvent(OnStartLoadingRequirements);
 
-            IEnumerable<string> rawRequirements = _dataIO.LoadAll(Helpers.FilesSettings.RequirementsFolderLocation, Helpers.FilesSettings.FileExtension);
+            IEnumerable<string> rawRequirements = _dataIO.LoadAll(_configuration.Value.RequirementsFolderLocation, _configuration.Value.FileExtension);
             IEnumerable<Folder> requirements = _converter.Convert(rawRequirements, _dataIO);
 
             _allRequirementsFolders = requirements;
@@ -67,11 +70,11 @@ public class RequirementsRepository : IRequirementsRepository
         string oldUrl = req.Url;
 
         //Buids the url and adds it to the file
-        string reqFileName = string.Concat(Helpers.FileHelpers.CurrationOf(req.Id), FilesSettings.FileExtension);
+        string reqFileName = string.Concat(Helpers.FileHelpers.CurrationOf(req.Id), _configuration.Value.FileExtension);
         string confirmedFolderUrl = folderUrl;
         if (string.IsNullOrEmpty(folderUrl) || !Directory.Exists(folderUrl))
         {
-            confirmedFolderUrl = Helpers.FilesSettings.RequirementsFolderLocation;
+            confirmedFolderUrl = _configuration.Value.RequirementsFolderLocation;
         }
         string requirementUrl = Path.Combine(confirmedFolderUrl, reqFileName);
         req.Url = requirementUrl;
@@ -153,7 +156,7 @@ public class RequirementsRepository : IRequirementsRepository
     public string CreateFolder(string newFolderName, string parentUrl)
     {
         //if root folder, there is no parent
-        string fixedUrl = parentUrl == Helpers.ReqAndProcProperties.RootFolderName ? string.Empty : parentUrl;
+        string fixedUrl = parentUrl == _configuration.Value.RootFolderName ? string.Empty : parentUrl;
 
         string newFolderUrl = _dataIO.CreateFolder(newFolderName, fixedUrl);
 

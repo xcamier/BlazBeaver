@@ -2,16 +2,24 @@ using System.Reflection;
 using System.Text;
 using BlazBeaver.Data;
 using BlazBeaver.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace BlazBeaver.DataAccess;
 
 public class DataSourceConverter<T> where T: IReqProt, new()
 {
+    private readonly IOptions<AppSettingsOptions> _configuration;
+
+    public DataSourceConverter(IOptions<AppSettingsOptions> configuration)
+    {
+        _configuration = configuration;
+    }
+
     public IEnumerable<Folder> Convert(IEnumerable<string> folderContent, IDataIO dataIO)
     {
         List<Folder> folders = new List<Folder>();
 
-        Folder currentFolder = AddAsNewFolder(string.Empty, Helpers.ReqAndProcProperties.RootFolderName, folders);
+        Folder currentFolder = AddAsNewFolder(string.Empty, _configuration.Value.RootFolderName, folders);
         foreach(string itemUrl in folderContent)
         {   
             if (Helpers.FileHelpers.IsPathAFile(itemUrl))
@@ -43,7 +51,7 @@ public class DataSourceConverter<T> where T: IReqProt, new()
         IEnumerable<string> allPropertiesNames = GetPOCOProperties();
 
         foreach (string propertyName in allPropertiesNames.
-                                            Where(pn => !Helpers.ReqAndProcProperties.PropertiesToNotSerialize.Contains(pn))) 
+                                            Where(pn => !Helpers.FilesSettings.PropertiesToNotSerialize.Contains(pn))) 
         {
             //Creation of the section
             string sectionName = Helpers.FilesSettings.SectionTpl.Replace("replace_me", propertyName);
@@ -149,7 +157,7 @@ public class DataSourceConverter<T> where T: IReqProt, new()
 
     private void AttachToParentFolder(List<Folder> folders, Folder currentFolder)
     {
-        if (currentFolder.Url == Helpers.ReqAndProcProperties.RootFolderName)
+        if (currentFolder.Url == _configuration.Value.RootFolderName)
         {
             //root
             folders.Add(currentFolder);
